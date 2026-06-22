@@ -5,7 +5,7 @@ import queue
 import logging
 import time
 from kubernetes import client, config
-from uid_resolver import PodUIDCache, build_docker_id_map
+from src.uid_resolver import PodUIDCache, build_docker_id_map
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 log = logging.getLogger("tetragon-consumer")

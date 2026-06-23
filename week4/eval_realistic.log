@@ -1,0 +1,103 @@
+2026-06-23 05:14:49,281 INFO Pod UID cache watcher started
+2026-06-23 05:14:49,295 INFO [ADD] default/attacker uid=e60bbab6-05a3-4078-bb38-c3f4fef734a1 ip=10.244.2.3 sa=default
+2026-06-23 05:14:49,298 INFO [ADD] default/legitimate-app uid=e9d87b2f-6860-42c4-90ed-92d55e823ace ip=10.244.2.4 sa=default
+2026-06-23 05:14:49,300 INFO [ADD] default/test-pod uid=02cd1ebd-db18-4426-a818-99f3d3259de0 ip=10.244.1.3 sa=default
+2026-06-23 05:14:49,301 INFO [ADD] kube-system/coredns-7db6d8ff4d-qct89 uid=68cdcf6b-55fb-43e1-9149-ba124939163d ip=10.244.0.2 sa=coredns
+2026-06-23 05:14:49,302 INFO [ADD] kube-system/coredns-7db6d8ff4d-vrckv uid=f5ef9e7d-e05d-4396-93b3-9acaab28f89d ip=10.244.0.3 sa=coredns
+2026-06-23 05:14:49,303 INFO [ADD] kube-system/etcd-cage-control-plane uid=25dd55a5-143c-4f0a-a6ab-98e73e869be7 ip=172.18.0.2 sa=None
+2026-06-23 05:14:49,304 INFO [ADD] kube-system/kindnet-bvw46 uid=37807f36-23ce-46aa-ad98-157afaeb88e7 ip=172.18.0.2 sa=kindnet
+2026-06-23 05:14:49,305 INFO [ADD] kube-system/kindnet-gmp2m uid=b2cb68e9-1d7a-46fc-b68d-652859539d6e ip=172.18.0.4 sa=kindnet
+2026-06-23 05:14:49,306 INFO [ADD] kube-system/kindnet-xlgc5 uid=d968842e-f911-4ca9-914a-4f4de97dedd2 ip=172.18.0.3 sa=kindnet
+2026-06-23 05:14:49,307 INFO [ADD] kube-system/kube-apiserver-cage-control-plane uid=b8fb40e2-39d5-427c-9994-14eb98233e5c ip=172.18.0.2 sa=None
+2026-06-23 05:14:49,308 INFO [ADD] kube-system/kube-controller-manager-cage-control-plane uid=71e65f11-cf97-4f10-a6a9-457200f55fac ip=172.18.0.2 sa=None
+2026-06-23 05:14:49,309 INFO [ADD] kube-system/kube-proxy-75ds9 uid=a8b7f5b0-c382-4bac-ae3b-9669fcf85bd8 ip=172.18.0.3 sa=kube-proxy
+2026-06-23 05:14:49,309 INFO [ADD] kube-system/kube-proxy-9zqgt uid=2f6c7226-9f81-4a35-8df4-2656d1df3862 ip=172.18.0.2 sa=kube-proxy
+2026-06-23 05:14:49,311 INFO [ADD] kube-system/kube-proxy-n6bw2 uid=f71777ac-5171-445e-8510-c590f0bf878b ip=172.18.0.4 sa=kube-proxy
+2026-06-23 05:14:49,312 INFO [ADD] kube-system/kube-scheduler-cage-control-plane uid=6e1ecb13-7693-4e6c-9663-b0b5a732c5fa ip=172.18.0.2 sa=None
+2026-06-23 05:14:49,314 INFO [ADD] kube-system/tetragon-55ht7 uid=b8b874e4-f001-441d-b64a-9fd35aeb0d9c ip=172.18.0.2 sa=tetragon
+2026-06-23 05:14:49,316 INFO [ADD] kube-system/tetragon-66j72 uid=36344422-9cf7-42e9-8a98-b0d7d6335477 ip=172.18.0.4 sa=tetragon
+2026-06-23 05:14:49,317 INFO [ADD] kube-system/tetragon-operator-d59bd58b8-tzgsd uid=34c59f48-72a7-4729-acf8-fb2fb65e14c8 ip=10.244.1.2 sa=tetragon-operator-service-account
+2026-06-23 05:14:49,318 INFO [ADD] kube-system/tetragon-xbcc4 uid=615f1883-ec46-4052-a04d-19235db90446 ip=172.18.0.3 sa=tetragon
+2026-06-23 05:14:49,319 INFO [ADD] local-path-storage/local-path-provisioner-988d74bc-l7jdm uid=8f7a7a96-a5e7-4ef8-b23e-e7d9120d71e5 ip=10.244.0.4 sa=local-path-provisioner-service-account
+2026-06-23 05:14:51,333 INFO Docker→UID map: 69 entries
+2026-06-23 05:14:51,333 INFO Tetragon consumer started
+2026-06-23 05:14:51,334 INFO Audit log consumer skipped (no audit policy in this cluster)
+2026-06-23 05:14:51,335 INFO Correlator started
+2026-06-23 05:14:51,336 INFO Running correlator (Ctrl+C to stop)...
+2026-06-23 05:14:56,709 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:14:56,710 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:14:56,710 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:14:56,710 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:14:56,710 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:14:56,710 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:02,696 INFO [QUEUED] kube-system/kindnet-gmp2m | /usr/sbin/iptables
+2026-06-23 05:15:02,697 INFO [QUEUED] kube-system/kindnet-gmp2m | /usr/sbin/iptables
+2026-06-23 05:15:02,697 INFO [QUEUED] kube-system/kindnet-gmp2m | /usr/sbin/iptables
+2026-06-23 05:15:02,698 INFO [QUEUED] kube-system/kindnet-gmp2m | /usr/sbin/iptables
+2026-06-23 05:15:02,698 INFO [QUEUED] kube-system/kindnet-xlgc5 | /usr/sbin/iptables
+2026-06-23 05:15:02,699 INFO [QUEUED] kube-system/kindnet-xlgc5 | /usr/sbin/iptables
+2026-06-23 05:15:02,699 INFO [QUEUED] kube-system/kindnet-xlgc5 | /usr/sbin/iptables
+2026-06-23 05:15:02,699 INFO [QUEUED] kube-system/kindnet-xlgc5 | /usr/sbin/iptables
+2026-06-23 05:15:02,700 INFO [QUEUED] kube-system/kindnet-bvw46 | /usr/sbin/iptables
+2026-06-23 05:15:02,701 INFO [QUEUED] kube-system/kindnet-bvw46 | /usr/sbin/iptables
+2026-06-23 05:15:02,701 INFO [QUEUED] kube-system/kindnet-bvw46 | /usr/sbin/iptables
+2026-06-23 05:15:02,701 INFO [QUEUED] kube-system/kindnet-bvw46 | /usr/sbin/iptables
+2026-06-23 05:15:06,698 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:15:06,699 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:06,699 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:15:06,700 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:15:06,701 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:15:06,702 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:15:17,993 INFO [LEARNED] exec container 4503e5eff747... -> legitimate-app
+2026-06-23 05:15:17,994 INFO [QUEUED] default/legitimate-app | /kind/bin/mount-product-files.sh
+2026-06-23 05:15:17,995 INFO [QUEUED] default/legitimate-app | /usr/bin/jq
+2026-06-23 05:15:17,995 INFO [QUEUED] default/legitimate-app | /usr/bin/cp
+2026-06-23 05:15:17,996 INFO [LEARNED] exec container 4503e5eff747... -> legitimate-app
+2026-06-23 05:15:17,998 INFO [QUEUED] default/legitimate-app | /bin/bash
+2026-06-23 05:15:17,998 WARNING [MEDIUM] T1059: Shell execution inside pod on default/legitimate-app
+2026-06-23 05:15:17,999 INFO [QUEUED] default/legitimate-app | /bin/bash
+2026-06-23 05:15:17,999 WARNING [MEDIUM] T1059: Shell execution inside pod on default/legitimate-app
+2026-06-23 05:15:18,001 INFO [QUEUED] default/legitimate-app | /usr/bin/sleep
+2026-06-23 05:15:18,002 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:15:18,002 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:18,003 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:15:18,004 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:15:18,006 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:15:18,007 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:15:18,008 INFO [QUEUED] kube-system/kube-proxy-n6bw2 | /usr/sbin/ip6tables
+2026-06-23 05:15:18,009 INFO [QUEUED] kube-system/kube-proxy-n6bw2 | /usr/sbin/iptables
+2026-06-23 05:15:18,009 INFO [QUEUED] kube-system/kube-proxy-75ds9 | /usr/sbin/ip6tables
+2026-06-23 05:15:18,009 INFO [QUEUED] kube-system/kube-proxy-75ds9 | /usr/sbin/iptables
+2026-06-23 05:15:19,994 INFO [QUEUED] kube-system/kube-proxy-9zqgt | /usr/sbin/ip6tables
+2026-06-23 05:15:21,994 INFO [QUEUED] kube-system/kube-proxy-9zqgt | /usr/sbin/iptables
+2026-06-23 05:15:21,995 INFO [LEARNED] exec container 03895261be2d... -> tetragon-66j72
+2026-06-23 05:15:21,995 INFO [QUEUED] kube-system/tetragon-66j72 | /usr/bin/tetra
+2026-06-23 05:15:22,695 INFO Docker→UID map: 69 entries
+2026-06-23 05:15:27,994 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:15:27,994 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:27,995 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:15:27,996 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:15:27,997 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:15:27,997 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:15:37,995 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:15:37,996 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:37,996 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:15:37,997 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:15:37,997 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:15:37,997 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:15:49,377 INFO [QUEUED] default/legitimate-app | /bin/bash
+2026-06-23 05:15:49,377 WARNING [MEDIUM] T1059: Shell execution inside pod on default/legitimate-app
+2026-06-23 05:15:49,378 INFO [QUEUED] default/legitimate-app | /usr/bin/sleep
+2026-06-23 05:15:49,379 INFO [QUEUED] default/attacker | /bin/bash
+2026-06-23 05:15:49,380 WARNING [MEDIUM] T1059: Shell execution inside pod on default/attacker
+2026-06-23 05:15:49,380 INFO [QUEUED] default/attacker | /usr/bin/whoami
+2026-06-23 05:15:49,382 INFO [QUEUED] default/attacker | /usr/bin/ls
+2026-06-23 05:15:49,383 INFO [QUEUED] default/attacker | /usr/bin/id
+2026-06-23 05:15:49,384 INFO [QUEUED] default/attacker | /usr/bin/sleep
+2026-06-23 05:15:49,384 INFO [QUEUED] kube-system/kube-proxy-n6bw2 | /usr/sbin/ip6tables
+2026-06-23 05:15:49,384 INFO [QUEUED] kube-system/kube-proxy-n6bw2 | /usr/sbin/iptables
+2026-06-23 05:15:49,385 INFO [QUEUED] kube-system/kube-proxy-75ds9 | /usr/sbin/ip6tables
+2026-06-23 05:15:49,385 INFO [QUEUED] kube-system/kube-proxy-75ds9 | /usr/sbin/iptables
+2026-06-23 05:15:51,378 INFO [QUEUED] kube-system/kube-proxy-9zqgt | /usr/sbin/ip6tables
+2026-06-23 05:15:53,377 INFO [QUEUED] kube-system/kube-proxy-9zqgt | /usr/sbin/iptables
+2026-06-23 05:15:54,121 INFO Docker→UID map: 69 entries

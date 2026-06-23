@@ -1,0 +1,25 @@
+2026-06-23 04:44:01,007 INFO Pod UID cache watcher started
+2026-06-23 04:44:01,030 INFO [ADD] default/attacker uid=9ab55795-33a6-48f0-b63b-2fd93e8216df ip=10.244.2.2 sa=default
+2026-06-23 04:44:01,033 INFO [ADD] default/test-pod uid=02cd1ebd-db18-4426-a818-99f3d3259de0 ip=10.244.1.3 sa=default
+2026-06-23 04:44:01,037 INFO [ADD] kube-system/coredns-7db6d8ff4d-qct89 uid=68cdcf6b-55fb-43e1-9149-ba124939163d ip=10.244.0.2 sa=coredns
+2026-06-23 04:44:01,040 INFO [ADD] kube-system/coredns-7db6d8ff4d-vrckv uid=f5ef9e7d-e05d-4396-93b3-9acaab28f89d ip=10.244.0.3 sa=coredns
+2026-06-23 04:44:01,042 INFO [ADD] kube-system/etcd-cage-control-plane uid=25dd55a5-143c-4f0a-a6ab-98e73e869be7 ip=172.18.0.2 sa=None
+2026-06-23 04:44:01,044 INFO [ADD] kube-system/kindnet-bvw46 uid=37807f36-23ce-46aa-ad98-157afaeb88e7 ip=172.18.0.2 sa=kindnet
+2026-06-23 04:44:01,047 INFO [ADD] kube-system/kindnet-gmp2m uid=b2cb68e9-1d7a-46fc-b68d-652859539d6e ip=172.18.0.4 sa=kindnet
+2026-06-23 04:44:01,050 INFO [ADD] kube-system/kindnet-xlgc5 uid=d968842e-f911-4ca9-914a-4f4de97dedd2 ip=172.18.0.3 sa=kindnet
+2026-06-23 04:44:01,053 INFO [ADD] kube-system/kube-apiserver-cage-control-plane uid=b8fb40e2-39d5-427c-9994-14eb98233e5c ip=172.18.0.2 sa=None
+2026-06-23 04:44:01,055 INFO [ADD] kube-system/kube-controller-manager-cage-control-plane uid=71e65f11-cf97-4f10-a6a9-457200f55fac ip=172.18.0.2 sa=None
+2026-06-23 04:44:01,058 INFO [ADD] kube-system/kube-proxy-75ds9 uid=a8b7f5b0-c382-4bac-ae3b-9669fcf85bd8 ip=172.18.0.3 sa=kube-proxy
+2026-06-23 04:44:01,061 INFO [ADD] kube-system/kube-proxy-9zqgt uid=2f6c7226-9f81-4a35-8df4-2656d1df3862 ip=172.18.0.2 sa=kube-proxy
+2026-06-23 04:44:01,065 INFO [ADD] kube-system/kube-proxy-n6bw2 uid=f71777ac-5171-445e-8510-c590f0bf878b ip=172.18.0.4 sa=kube-proxy
+2026-06-23 04:44:01,068 INFO [ADD] kube-system/kube-scheduler-cage-control-plane uid=6e1ecb13-7693-4e6c-9663-b0b5a732c5fa ip=172.18.0.2 sa=None
+2026-06-23 04:44:01,072 INFO [ADD] kube-system/tetragon-55ht7 uid=b8b874e4-f001-441d-b64a-9fd35aeb0d9c ip=172.18.0.2 sa=tetragon
+2026-06-23 04:44:01,075 INFO [ADD] kube-system/tetragon-66j72 uid=36344422-9cf7-42e9-8a98-b0d7d6335477 ip=172.18.0.4 sa=tetragon
+2026-06-23 04:44:01,080 INFO [ADD] kube-system/tetragon-operator-d59bd58b8-tzgsd uid=34c59f48-72a7-4729-acf8-fb2fb65e14c8 ip=10.244.1.2 sa=tetragon-operator-service-account
+2026-06-23 04:44:01,084 INFO [ADD] kube-system/tetragon-xbcc4 uid=615f1883-ec46-4052-a04d-19235db90446 ip=172.18.0.3 sa=tetragon
+2026-06-23 04:44:01,087 INFO [ADD] local-path-storage/local-path-provisioner-988d74bc-l7jdm uid=8f7a7a96-a5e7-4ef8-b23e-e7d9120d71e5 ip=10.244.0.4 sa=local-path-provisioner-service-account
+2026-06-23 04:44:03,007 INFO Starting Tetragon consumer
+2026-06-23 04:44:03,008 INFO Audit log consumer skipped (no audit policy in this cluster)
+2026-06-23 04:44:03,009 INFO Correlator started
+2026-06-23 04:44:03,010 INFO Running correlator (Ctrl+C to stop)...
+2026-06-23 04:44:03,011 INFO Tetragon consumer started

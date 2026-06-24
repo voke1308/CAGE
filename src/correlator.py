@@ -20,53 +20,50 @@ class Correlator:
     def start(self):
         self.cache.start_watch()
         time.sleep(2)
-        tetragon = TetragonConsumer(self.cache, self.event_queue)
-        tetragon.start()
-        audit = AuditLogConsumer(self.cache, self.event_queue)
-        audit.start()
-        t = threading.Thread(target=self._correlation_loop, daemon=True)
-        t.start()
-        log.info("Correlator started")
 
-    def _correlation_loop(self):
+        TetragonConsumer(self.cache, self.event_queue).start()
+        AuditLogConsumer(self.cache, self.event_queue).start()
+
+        threading.Thread(target=self._loop, daemon=True).start()
+        log.info("Correlator started — watching for T1059, T1552, chains")
+
+    def _loop(self):
         while True:
             try:
                 ev = self.event_queue.get(timeout=1)
                 alerts = self.graph.add_event(ev)
-                for alert in alerts:
-                    self._fire_alert(alert)
+                self.alert_list.extend(alerts)
             except queue.Empty:
                 pass
-
-    def _fire_alert(self, alert: dict):
-        self.alert_list.append(alert)
-        severity = alert.get("severity", "INFO")
-        rule = alert.get("rule", "UNKNOWN")
-        desc = alert.get("description", "")
-        pod = f"{alert.get('namespace')}/{alert.get('pod_name')}"
-        log.warning(f"[{severity}] {rule}: {desc} on {pod}")
 
     def get_alerts(self):
         return self.alert_list.copy()
 
 if __name__ == "__main__":
-    correlator = Correlator()
-    correlator.start()
-    log.info("Running correlator (Ctrl+C to stop)...")
+    c = Correlator()
+    c.start()
+
+    log.info("Running (Ctrl+C to stop)...")
     try:
         while True:
-            alerts = correlator.get_alerts()
-            if alerts:
-                print(f"\n=== {len(alerts)} Alerts ===")
-                for a in alerts[-5:]:
-                    print(f"  [{a['severity']}] {a['rule']}: {a['description']}")
-            time.sleep(5)
+            time.sleep(10)
+            alerts = c.get_alerts()
+            by_rule = {}
+            for a in alerts:
+                r = a["rule"]
+                by_rule[r] = by_rule.get(r, 0) + 1
+            if by_rule:
+                log.info(f"Alert summary: {by_rule}")
     except KeyboardInterrupt:
-        total = len(alerts)
-        print(f"\n--- Final Alert Count ---")
-        print(f"Total: {total}")
+        alerts = c.get_alerts()
+        print(f"\n=== FINAL RESULTS ===")
+        print(f"Total alerts: {len(alerts)}")
         by_rule = {}
         for a in alerts:
-            rule = a["rule"]
-            by_rule[rule] = by_rule.get(rule, 0) + 1
+            by_rule[a["rule"]] = by_rule.get(a["rule"], 0) + 1
         print(f"By rule: {by_rule}")
+        crits = [a for a in alerts if a["severity"] == "CRITICAL"]
+        if crits:
+            print(f"\nCRITICAL chain alerts:")
+            for a in crits:
+                print(f"  {a['rule']} on {a['namespace']}/{a['pod_name']} at {a['timestamp']}")

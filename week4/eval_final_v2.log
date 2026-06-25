@@ -1,0 +1,73 @@
+2026-06-24 10:15:08,984 INFO Pod UID cache watcher started
+2026-06-24 10:15:09,032 INFO [ADD] default/attacker uid=088e118a-4d22-43f9-9df6-334a71c28490 ip=10.244.1.10 sa=default
+2026-06-24 10:15:09,039 INFO [ADD] default/legitimate-app uid=9cafc281-b706-40f3-a1e0-67e82b9aac0c ip=10.244.2.3 sa=default
+2026-06-24 10:15:09,045 INFO [ADD] default/victim uid=87cc5989-4277-49db-b2ac-b349ee96f71d ip=10.244.2.6 sa=default
+2026-06-24 10:15:09,050 INFO [ADD] kube-system/coredns-7db6d8ff4d-fl5kv uid=b563754a-85fd-4edc-a4b2-b56b4ea805ea ip=10.244.0.4 sa=coredns
+2026-06-24 10:15:09,061 INFO [ADD] kube-system/coredns-7db6d8ff4d-qx5mb uid=47842b31-7731-4cc3-9f4b-b9a5733d3c25 ip=10.244.0.2 sa=coredns
+2026-06-24 10:15:09,064 INFO [ADD] kube-system/etcd-cage-control-plane uid=acabc52e-c566-443d-beb8-0d7652b3c141 ip=172.18.0.7 sa=None
+2026-06-24 10:15:09,067 INFO [ADD] kube-system/kindnet-2nrbr uid=324f6fdc-3d3e-44a2-b67f-54fba032e24c ip=172.18.0.5 sa=kindnet
+2026-06-24 10:15:09,070 INFO [ADD] kube-system/kindnet-7568f uid=7a14a1cf-fbb1-46bb-a560-12dc47b811b0 ip=172.18.0.4 sa=kindnet
+2026-06-24 10:15:09,073 INFO [ADD] kube-system/kindnet-nn5jf uid=918ff8ca-3e62-465d-9fff-bd3d31305e82 ip=172.18.0.7 sa=kindnet
+2026-06-24 10:15:09,082 INFO [ADD] kube-system/kube-apiserver-cage-control-plane uid=ed14a42a-fc9d-4801-86e1-9fba9ccc82f2 ip=172.18.0.7 sa=None
+2026-06-24 10:15:09,086 INFO [ADD] kube-system/kube-controller-manager-cage-control-plane uid=b3e8327d-513e-4f94-b952-c84c5d122c80 ip=172.18.0.7 sa=None
+2026-06-24 10:15:09,094 INFO [ADD] kube-system/kube-proxy-454nk uid=b91e951c-f147-445e-9029-66bbad9e8301 ip=172.18.0.5 sa=kube-proxy
+2026-06-24 10:15:09,097 INFO [ADD] kube-system/kube-proxy-mlxbk uid=62bcc33e-4984-4a92-a58f-7e8dedd273e5 ip=172.18.0.7 sa=kube-proxy
+2026-06-24 10:15:09,100 INFO [ADD] kube-system/kube-proxy-qrwb7 uid=132e47ec-e1b6-4952-be0f-4562725470f4 ip=172.18.0.4 sa=kube-proxy
+2026-06-24 10:15:09,102 INFO [ADD] kube-system/kube-scheduler-cage-control-plane uid=f2070261-e7dc-4ec8-9b84-7357125513fd ip=172.18.0.7 sa=None
+2026-06-24 10:15:09,105 INFO [ADD] kube-system/tetragon-22kl5 uid=9c0d2c83-ab17-4845-855e-c975f0a57ecb ip=172.18.0.4 sa=tetragon
+2026-06-24 10:15:09,110 INFO [ADD] kube-system/tetragon-4c5qp uid=57de9861-b72c-4c93-8f05-d211bf4f8b21 ip=172.18.0.5 sa=tetragon
+2026-06-24 10:15:09,113 INFO [ADD] kube-system/tetragon-operator-5574d767c8-jlk72 uid=641d4495-ca54-4c48-ba53-391139b7180e ip=10.244.1.11 sa=tetragon-operator-service-account
+2026-06-24 10:15:09,116 INFO [ADD] kube-system/tetragon-operator-d59bd58b8-9wnlq uid=21da7385-b71b-4242-a75b-7c3f324987ca ip=10.244.2.2 sa=tetragon-operator-service-account
+2026-06-24 10:15:09,119 INFO [ADD] kube-system/tetragon-xnk4l uid=3cc6d6bf-b2cc-446a-a4a0-b97bc0ddb044 ip=172.18.0.7 sa=tetragon
+2026-06-24 10:15:09,122 INFO [ADD] local-path-storage/local-path-provisioner-988d74bc-tvrv4 uid=3825b8bf-7144-4922-93aa-f3db76d0defe ip=10.244.0.3 sa=local-path-provisioner-service-account
+2026-06-24 10:15:11,063 INFO Docker→UID map: 69 entries
+2026-06-24 10:15:11,064 INFO Tetragon consumer started
+2026-06-24 10:15:11,065 INFO Audit log consumer started
+2026-06-24 10:15:11,067 INFO Correlator started — watching for T1059, T1552, chains
+2026-06-24 10:15:11,067 INFO Running (Ctrl+C to stop)...
+2026-06-24 10:15:12,772 INFO [AUDIT] secret list by system:serviceaccount:default:default | pod=attacker | secret=<list>
+2026-06-24 10:15:12,773 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-06-24 10:15:14,016 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,016 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,016 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,017 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,018 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:14,018 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:14,021 INFO [QUEUED] kube-system/kindnet-7568f | /usr/sbin/iptables
+2026-06-24 10:15:14,022 INFO [QUEUED] kube-system/kindnet-7568f | /usr/sbin/iptables
+2026-06-24 10:15:14,023 INFO [QUEUED] kube-system/kindnet-7568f | /usr/sbin/iptables
+2026-06-24 10:15:14,023 INFO [QUEUED] kube-system/kindnet-7568f | /usr/sbin/iptables
+2026-06-24 10:15:16,015 INFO [LEARNED] exec container eda895db9f49... -> victim
+2026-06-24 10:15:16,015 INFO [QUEUED] default/victim | /kind/bin/mount-product-files.sh
+2026-06-24 10:15:16,015 INFO [QUEUED] default/victim | /usr/bin/jq
+2026-06-24 10:15:16,016 INFO [QUEUED] default/victim | /usr/bin/cp
+2026-06-24 10:15:16,016 INFO [LEARNED] exec container eda895db9f49... -> victim
+2026-06-24 10:15:16,016 INFO [QUEUED] default/victim | /usr/bin/bash
+2026-06-24 10:15:16,016 INFO [QUEUED] default/victim | /usr/bin/sleep
+2026-06-24 10:15:16,017 INFO [QUEUED] kube-system/kube-proxy-qrwb7 | /usr/sbin/iptables
+2026-06-24 10:15:16,017 INFO [QUEUED] kube-system/kube-proxy-qrwb7 | /usr/sbin/ip6tables
+2026-06-24 10:15:16,018 INFO [QUEUED] kube-system/kube-proxy-454nk | /usr/sbin/ip6tables
+2026-06-24 10:15:16,018 INFO [QUEUED] kube-system/kube-proxy-454nk | /usr/sbin/iptables
+2026-06-24 10:15:16,401 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+2026-06-24 10:15:16,401 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-06-24 10:15:18,015 INFO [QUEUED] kube-system/kindnet-2nrbr | /usr/sbin/iptables
+2026-06-24 10:15:18,015 INFO [QUEUED] kube-system/kindnet-2nrbr | /usr/sbin/iptables
+2026-06-24 10:15:18,016 INFO [QUEUED] kube-system/kindnet-2nrbr | /usr/sbin/iptables
+2026-06-24 10:15:18,016 INFO [QUEUED] kube-system/kindnet-2nrbr | /usr/sbin/iptables
+2026-06-24 10:15:18,912 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+2026-06-24 10:15:18,913 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-06-24 10:15:19,649 INFO [AUDIT] secret list by system:serviceaccount:default:default | pod=attacker | secret=<list>
+2026-06-24 10:15:19,650 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-06-24 10:15:19,669 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+2026-06-24 10:15:19,670 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-06-24 10:15:21,068 INFO Alert summary: {'T1552': 2, 'T1021': 3}
+2026-06-24 10:15:26,014 INFO [QUEUED] default/legitimate-app | /bin/bash
+2026-06-24 10:15:26,015 INFO [QUEUED] default/legitimate-app | /usr/bin/sleep
+2026-06-24 10:15:31,048 INFO Alert summary: {'T1552': 2, 'T1021': 3}
+2026-06-24 10:15:35,599 INFO [ADD] kube-system/tetragon-operator-5574d767c8-jlk72 uid=641d4495-ca54-4c48-ba53-391139b7180e ip=10.244.1.11 sa=tetragon-operator-service-account

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CAGE — Live Attack Graph</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e1a;--bg2:#0f1524;--bg3:#141929;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--teal:#14b8a6;--amber:#f59e0b;
+  --red:#ef4444;--green:#22c55e;--purple:#a855f7;
+}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',monospace;font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-box{width:26px;height:26px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.logo-title{font-size:14px;font-weight:600;letter-spacing:.05em}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--text2)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;animation:blink 2s infinite}
+.dot.green{background:var(--green)}.dot.red{background:var(--red)}.dot.amber{background:var(--amber)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#clock{color:var(--text3);font-size:11px;letter-spacing:.05em}
+
+/* Chain banner */
+#chain-banner{display:none;padding:9px 20px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.25);align-items:center;gap:10px;font-size:11px;color:var(--red);flex-shrink:0}
+#chain-banner.show{display:flex}
+.chain-step{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.cs-t1021{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+.cs-t1059{background:rgba(234,179,8,.15);color:var(--amber);border:1px solid rgba(234,179,8,.3)}
+.cs-t1552{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.chain-arrow{color:var(--text3)}
+#chain-pod{font-size:11px;color:rgba(239,68,68,.8);margin-left:auto}
+#chain-ts{font-size:10px;color:var(--text3);margin-left:8px}
+
+/* Metrics */
+.metrics{display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
+.metric{flex:1;padding:10px 16px;background:var(--bg2);display:flex;align-items:center;gap:10px}
+.mv{font-size:22px;font-weight:700;line-height:1;font-family:monospace}
+.mv.crit{color:var(--red)}.mv.high{color:var(--amber)}.mv.med{color:#eab308}.mv.ok{color:var(--green)}.mv.blue{color:var(--blue)}
+.ml{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.md{font-size:9px;color:var(--text3);margin-top:2px}
+
+/* Main */
+.main{display:grid;grid-template-columns:240px 1fr 300px;flex:1;min-height:0;overflow:hidden}
+
+/* Left */
+.left{border-right:1px solid var(--border);overflow-y:auto;background:var(--bg2);display:flex;flex-direction:column}
+.ph{padding:10px 14px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.ph span{color:var(--text2);font-size:10px;text-transform:none;letter-spacing:0}
+
+.pod-item{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;cursor:pointer;transition:background .1s;border-left:2px solid transparent}
+.pod-item:hover{background:var(--bg3)}
+.pod-item.sel{background:rgba(59,130,246,.06);border-left-color:var(--blue)}
+.pod-item.sev-critical{border-left-color:var(--red);animation:pod-pulse 3s infinite}
+.pod-item.sev-high{border-left-color:var(--amber)}
+.pod-item.sev-medium{border-left-color:#eab308}
+@keyframes pod-pulse{0%,100%{box-shadow:none}50%{box-shadow:inset 2px 0 8px rgba(239,68,68,.15)}}
+.pi-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.pi-info{flex:1;min-width:0}
+.pi-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi-ns{font-size:9px;color:var(--text3);margin-top:1px}
+.pi-uid{font-size:8px;color:var(--text3);margin-top:2px;opacity:.6;font-family:monospace}
+.pi-badges{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.badge{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:600;letter-spacing:.03em}
+.badge.crit{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.badge.high{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
+.badge.med{background:rgba(234,179,8,.15);color:#eab308;border:1px solid rgba(234,179,8,.3)}
+.badge.ok{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.badge.info{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+
+/* Center */
+.center{display:flex;flex-direction:column;overflow:hidden;position:relative}
+#graph-canvas{width:100%;flex:1;display:block}
+.graph-controls{position:absolute;bottom:12px;left:12px;display:flex;gap:6px}
+.gbtn{background:var(--bg2);border:1px solid var(--border2);color:var(--text2);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;transition:all .15s}
+.gbtn:hover{background:var(--bg3);color:var(--text);border-color:var(--blue)}
+.legend{position:absolute;top:10px;right:10px;background:rgba(10,14,26,.88);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;font-size:10px;color:var(--text2);backdrop-filter:blur(8px)}
+.li{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.li:last-child{margin:0}
+.li-dot{width:9px;height:9px;border-radius:50%}
+.li-line{width:18px;height:2px}
+
+/* Right */
+.right{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg2)}
+.alert-list{overflow-y:auto;max-height:45%}
+.alert-item{padding:9px 12px;border-bottom:1px solid var(--border);border-left:2px solid transparent;transition:background .1s;animation:fadeIn .3s ease}
+.alert-item:hover{background:var(--bg3)}
+.alert-item.CRITICAL{border-left-color:var(--red)}
+.alert-item.HIGH{border-left-color:var(--amber)}
+.alert-item.MEDIUM{border-left-color:#eab308}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.at{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.asev{font-size:8px;font-weight:700;letter-spacing:.06em;padding:1px 4px;border-radius:2px}
+.CRITICAL .asev{background:rgba(239,68,68,.15);color:var(--red)}
+.HIGH .asev{background:rgba(249,115,22,.15);color:#f97316}
+.MEDIUM .asev{background:rgba(234,179,8,.15);color:#eab308}
+.arule{font-size:11px;font-weight:600;flex:1}
+.atime{font-size:9px;color:var(--text3)}
+.adesc{font-size:10px;color:var(--text2);margin-bottom:3px;line-height:1.4}
+.ameta{display:flex;gap:5px;flex-wrap:wrap}
+.atag{font-size:8px;color:var(--text3);background:rgba(255,255,255,.04);border:1px solid var(--border);padding:1px 4px;border-radius:2px;font-family:monospace}
+
+/* Event stream */
+.evt-stream{flex:1;overflow-y:auto}
+.evt{padding:5px 12px;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:7px;font-size:10px;line-height:1.4;transition:background .15s}
+.evt:hover{background:rgba(255,255,255,.02)}
+.et{color:var(--text3);flex-shrink:0;width:52px;font-family:monospace}
+.ek{flex-shrink:0;width:60px}
+.ek.process_exec{color:#eab308}.ek.k8s_secret_access{color:var(--teal)}.ek.pod_exec{color:var(--purple)}.ek.network_connect{color:var(--blue)}
+.eb{color:var(--text2);flex:1;min-width:0;word-break:break-all}
+.ep{color:var(--blue)}.ebn{color:var(--text)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+
+/* Connection status */
+#conn-status{font-size:10px;color:var(--text3);transition:color .3s}
+#conn-status.live{color:var(--green)}
+#conn-status.dead{color:var(--red)}
+
+/* Tooltip */
+#tt{position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:10px 13px;font-size:10px;pointer-events:none;z-index:1000;max-width:240px;display:none;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#tt.show{display:block}
+.tt-title{font-weight:600;font-size:11px;margin-bottom:5px}
+.tt-row{color:var(--text2);margin-bottom:2px}
+.tt-row span{color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">
+    <div class="logo-box">⬡</div>
+    <div>
+      <div class="logo-title">CAGE</div>
+      <div class="logo-sub">Cross-layer Attack Graph Engine</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span><span class="dot green" id="dot-tetragon"></span>Tetragon eBPF</span>
+    <span><span class="dot green" id="dot-audit"></span>K8s Audit Log</span>
+    <span id="conn-status">connecting…</span>
+    <span id="clock"></span>
+  </div>
+</div>
+
+<div id="chain-banner">
+  <span style="font-weight:700;flex-shrink:0">⚠ CHAIN DETECTED</span>
+  <div style="display:flex;align-items:center;gap:6px" id="chain-steps">
+    <span class="chain-step cs-t1021">T1021 Remote Exec</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-step cs-t1059">T1059 Shell Spawn</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-step cs-t1552">T1552 Secret Access</span>
+  </div>
+  <span id="chain-pod"></span>
+  <span id="chain-ts"></span>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="mv crit" id="m-crit">0</div><div><div class="ml">Critical</div><div class="md" id="md-crit">chains</div></div></div>
+  <div class="metric"><div class="mv high" id="m-high">0</div><div><div class="ml">High</div><div class="md">T1552</div></div></div>
+  <div class="metric"><div class="mv med" id="m-med">0</div><div><div class="ml">Medium</div><div class="md">T1059/T1021</div></div></div>
+  <div class="metric"><div class="mv ok" id="m-fp">0</div><div><div class="ml">False Positives</div><div class="md" id="md-fp">precision 100%</div></div></div>
+  <div class="metric"><div class="mv blue" id="m-pods">0</div><div><div class="ml">Pods Tracked</div><div class="md" id="md-pods">loading…</div></div></div>
+  <div class="metric"><div class="mv blue" id="m-evts">0</div><div><div class="ml">Events/min</div><div class="md">live</div></div></div>
+</div>
+
+<div class="main">
+  <!-- Left: pods -->
+  <div class="left">
+    <div class="ph">Pod Inventory <span id="pod-count">—</span></div>
+    <div id="pod-list"></div>
+  </div>
+
+  <!-- Center: graph -->
+  <div class="center">
+    <canvas id="graph-canvas"></canvas>
+    <div class="legend">
+      <div class="li"><div class="li-dot" style="background:#ef4444"></div>Critical pod</div>
+      <div class="li"><div class="li-dot" style="background:#f59e0b"></div>Alert pod</div>
+      <div class="li"><div class="li-dot" style="background:#22c55e"></div>Clean pod</div>
+      <div class="li"><div class="li-dot" style="background:#64748b"></div>System pod</div>
+      <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
+        <div class="li"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
+        <div class="li"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
+        <div class="li"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
+      </div>
+    </div>
+    <div class="graph-controls">
+      <button class="gbtn" onclick="resetLayout()">↺ Reset</button>
+      <button class="gbtn" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+    </div>
+  </div>
+
+  <!-- Right: alerts + events -->
+  <div class="right">
+    <div class="ph">Alert Feed <span id="alert-count">0 alerts</span></div>
+    <div class="alert-list" id="alert-list"></div>
+    <div class="ph" style="margin-top:0">Live Event Stream <span id="evt-count">0 events</span></div>
+    <div class="evt-stream" id="evt-stream"></div>
+  </div>
+</div>
+
+<div id="tt">
+  <div class="tt-title" id="tt-name"></div>
+  <div class="tt-row"><span>ns: </span><span id="tt-ns"></span></div>
+  <div class="tt-row"><span>uid: </span><span id="tt-uid"></span></div>
+  <div class="tt-row"><span>ip: </span><span id="tt-ip"></span></div>
+  <div class="tt-row"><span>node: </span><span id="tt-node"></span></div>
+  <div class="tt-row"><span>alerts: </span><span id="tt-alerts"></span></div>
+</div>
+
+<script>
+const BASE = 'http://localhost:5000';
+
+// ── Clock ──
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+}, 1000);
+
+// ── State ──
+let pods = {};       // uid -> pod data
+let graphNodes = []; // for canvas
+let graphEdges = [];
+let alerts = [];
+let evtCount = 0;
+let evtPerMin = 0;
+let evtMinBucket = 0;
+let paused = false;
+let selPod = null;
+let animTime = 0;
+let animPaused = false;
+
+// ── Fetch initial data ──
+async function fetchAll() {
+  try {
+    const [podsRes, alertsRes, statsRes, graphRes] = await Promise.all([
+      fetch(BASE+'/api/pods'),
+      fetch(BASE+'/api/alerts'),
+      fetch(BASE+'/api/stats'),
+      fetch(BASE+'/api/graph'),
+    ]);
+    pods = {};
+    const podList = await podsRes.json();
+    podList.forEach(p => pods[p.uid] = p);
+
+    alerts = await alertsRes.json();
+    const stats = await statsRes.json();
+    const graph = await graphRes.json();
+
+    updateMetrics(stats);
+    renderPodList(graph.nodes);
+    initGraph(graph.nodes, graph.edges);
+    renderAlerts(alerts.slice().reverse());
+
+    document.getElementById('conn-status').textContent = 'LIVE';
+    document.getElementById('conn-status').className = 'live';
+  } catch(e) {
+    document.getElementById('conn-status').textContent = 'disconnected';
+    document.getElementById('conn-status').className = 'dead';
+    setTimeout(fetchAll, 3000);
+  }
+}
+
+// ── SSE: alerts ──
+function connectAlertStream() {
+  const es = new EventSource(BASE+'/stream/alerts');
+  es.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type !== 'alert') return;
+    const alert = msg.data;
+    alerts.unshift(alert);
+    prependAlert(alert);
+
+    // Update chain banner
+    if (alert.severity === 'CRITICAL' && alert.rule.includes('→')) {
+      document.getElementById('chain-banner').classList.add('show');
+      document.getElementById('chain-pod').textContent = `${alert.namespace}/${alert.pod_name}`;
+      document.getElementById('chain-ts').textContent = new Date().toTimeString().slice(0,8);
+    }
+
+    // Refresh stats and graph
+    fetchStats();
+    fetchGraph();
+    document.getElementById('conn-status').textContent = 'LIVE';
+    document.getElementById('conn-status').className = 'live';
+  };
+  es.onerror = () => {
+    document.getElementById('conn-status').textContent = 'reconnecting…';
+    document.getElementById('conn-status').className = 'dead';
+    setTimeout(connectAlertStream, 3000);
+    es.close();
+  };
+}
+
+// ── SSE: events ──
+function connectEventStream() {
+  const es = new EventSource(BASE+'/stream/events');
+  es.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type !== 'event') return;
+    const ev = msg.data;
+    evtCount++;
+    evtMinBucket++;
+    document.getElementById('evt-count').textContent = evtCount + ' events';
+    prependEvent(ev);
+  };
+  es.onerror = () => {
+    setTimeout(connectEventStream, 3000);
+    es.close();
+  };
+}
+
+// ── Metrics ──
+function updateMetrics(stats) {
+  document.getElementById('m-crit').textContent = stats.by_severity?.CRITICAL || 0;
+  document.getElementById('m-high').textContent = stats.by_severity?.HIGH || 0;
+  document.getElementById('m-med').textContent  = stats.by_severity?.MEDIUM || 0;
+  document.getElementById('m-pods').textContent = stats.pods_tracked || 0;
+  document.getElementById('pod-count').textContent = (stats.pods_tracked || 0) + ' pods';
+}
+
+async function fetchStats() {
+  try {
+    const res = await fetch(BASE+'/api/stats');
+    updateMetrics(await res.json());
+    document.getElementById('alert-count').textContent = alerts.length + ' alerts';
+  } catch(e) {}
+}
+
+async function fetchGraph() {
+  try {
+    const res = await fetch(BASE+'/api/graph');
+    const g = await res.json();
+    updateGraphData(g.nodes, g.edges);
+    renderPodList(g.nodes);
+  } catch(e) {}
+}
+
+// ── Pod list ──
+const SEV_COLORS = { critical:'#ef4444', high:'#f59e0b', medium:'#eab308', clean:'#22c55e' };
+const SYSTEM_NS = new Set(['kube-system','local-path-storage','kube-node-lease']);
+
+function podInitials(name) {
+  return name.replace(/-[a-z0-9]{5,}$/, '').slice(0,2).toUpperCase();
+}
+
+function renderPodList(nodes) {
+  const list = document.getElementById('pod-list');
+
+  // Sort: critical first, then by namespace
+  const sorted = [...nodes].sort((a,b) => {
+    const sevOrder = {critical:0,high:1,medium:2,clean:3};
+    const diff = (sevOrder[a.severity]||3) - (sevOrder[b.severity]||3);
+    if (diff !== 0) return diff;
+    const aNs = SYSTEM_NS.has(a.namespace) ? 1 : 0;
+    const bNs = SYSTEM_NS.has(b.namespace) ? 1 : 0;
+    return aNs - bNs;
+  });
+
+  list.innerHTML = '';
+  sorted.forEach(node => {
+    const color = SEV_COLORS[node.severity] || '#64748b';
+    const isSystem = SYSTEM_NS.has(node.namespace);
+    const div = document.createElement('div');
+    div.className = `pod-item sev-${node.severity}${selPod === node.uid ? ' sel' : ''}`;
+    div.onclick = () => { selPod = node.uid; renderPodList(sorted); };
+
+    const badgesHtml = node.alert_count > 0
+      ? `<div class="badge ${node.severity === 'critical' ? 'crit' : node.severity === 'high' ? 'high' : 'med'}">${node.severity.toUpperCase()}</div>`
+      : `<div class="badge ok">CLEAN</div>`;
+
+    div.innerHTML = `
+      <div class="pi-icon" style="background:${color}22;color:${color}">${podInitials(node.name)}</div>
+      <div class="pi-info">
+        <div class="pi-name">${node.name}</div>
+        <div class="pi-ns">${node.namespace} · ${node.node || '—'}</div>
+        <div class="pi-uid">${(node.uid||'').slice(0,18)}…</div>
+      </div>
+      <div class="pi-badges">${badgesHtml}${node.alert_count > 0 ? `<div class="badge info">${node.alert_count} alerts</div>` : ''}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ── Alerts ──
+function renderAlerts(list) {
+  const feed = document.getElementById('alert-list');
+  feed.innerHTML = '';
+  list.slice(0, 50).forEach(a => feed.appendChild(makeAlertEl(a)));
+  document.getElementById('alert-count').textContent = list.length + ' alerts';
+}
+
+function prependAlert(a) {
+  const feed = document.getElementById('alert-list');
+  feed.insertBefore(makeAlertEl(a), feed.firstChild);
+  document.getElementById('alert-count').textContent = alerts.length + ' alerts';
+}
+
+function makeAlertEl(a) {
+  const el = document.createElement('div');
+  el.className = `alert-item ${a.severity}`;
+  const ts = a.timestamp ? new Date(a.timestamp).toTimeString().slice(0,8) : '—';
+  el.innerHTML = `
+    <div class="at">
+      <span class="asev">${a.severity}</span>
+      <span class="arule">${a.rule}</span>
+      <span class="atime">${ts}</span>
+    </div>
+    <div class="adesc">${a.description || ''}</div>
+    <div class="ameta">
+      <span class="atag">${a.namespace||''}/${a.pod_name||''}</span>
+      ${a.binary ? `<span class="atag">${a.binary}</span>` : ''}
+      ${a.secret_name ? `<span class="atag">secret:${a.secret_name}</span>` : ''}
+    </div>
+  `;
+  return el;
+}
+
+// ── Events ──
+const EVT_LABELS = {
+  process_exec: 'EXEC',
+  k8s_secret_access: 'AUDIT',
+  pod_exec: 'EXEC',
+  network_connect: 'NET',
+};
+
+function prependEvent(ev) {
+  const stream = document.getElementById('evt-stream');
+  const el = document.createElement('div');
+  el.className = 'evt';
+  el.style.background = 'rgba(59,130,246,.04)';
+  const ts = ev.timestamp ? new Date(ev.timestamp).toTimeString().slice(0,8) : new Date().toTimeString().slice(0,8);
+  const label = EVT_LABELS[ev.event_type] || ev.event_type;
+  let body = '';
+  if (ev.event_type === 'process_exec') body = ev.binary || '';
+  else if (ev.event_type === 'k8s_secret_access') body = `secret ${ev.verb} by ${ev.user||''}`;
+  else if (ev.event_type === 'pod_exec') body = `kubectl exec → ${ev.target_pod||''} by ${ev.user||''}`;
+  else body = JSON.stringify(ev).slice(0,60);
+
+  el.innerHTML = `
+    <span class="et">${ts}</span>
+    <span class="ek ${ev.event_type}">${label}</span>
+    <span class="eb"><span class="ep">${ev.pod_name||ev.namespace||''}</span> · <span class="ebn">${body}</span></span>
+  `;
+  stream.insertBefore(el, stream.firstChild);
+  setTimeout(() => el.style.background = '', 500);
+
+  // Trim to 200
+  while (stream.children.length > 200) stream.removeChild(stream.lastChild);
+}
+
+// ── Events/min counter ──
+setInterval(() => {
+  evtPerMin = evtMinBucket;
+  evtMinBucket = 0;
+  document.getElementById('m-evts').textContent = evtPerMin * 6; // per min estimate
+}, 10000);
+
+// ── Canvas graph ──
+const canvas = document.getElementById('graph-canvas');
+const ctx = canvas.getContext('2d');
+let nodePositions = {}; // uid -> {x,y}
+let gNodes = [], gEdges = [];
+let dragging = null, dragOff = {x:0,y:0};
+let animFrame;
+
+function resize() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+window.addEventListener('resize', () => { resize(); layoutNodes(); });
+resize();
+
+function initGraph(nodes, edges) {
+  gNodes = nodes;
+  gEdges = edges;
+  layoutNodes();
+  if (!animFrame) animLoop(0);
+}
+
+function updateGraphData(nodes, edges) {
+  // Keep existing positions for known nodes
+  const oldPos = {...nodePositions};
+  gNodes = nodes;
+  gEdges = edges;
+  // Assign positions for new nodes
+  nodes.forEach(n => {
+    if (!nodePositions[n.uid]) {
+      const cx = canvas.width/2, cy = canvas.height/2;
+      const angle = Math.random() * Math.PI * 2;
+      const r = 80 + Math.random() * 120;
+      nodePositions[n.uid] = { x: cx + Math.cos(angle)*r, y: cy + Math.sin(angle)*r };
+    }
+  });
+}
+
+function layoutNodes() {
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  const userNs = gNodes.filter(n => n.namespace === 'default');
+  const sysNs = gNodes.filter(n => n.namespace !== 'default');
+
+  // Place user pods in center cluster
+  userNs.forEach((n, i) => {
+    if (nodePositions[n.uid]) return;
+    const angle = (i / Math.max(userNs.length,1)) * Math.PI * 2;
+    nodePositions[n.uid] = { x: cx + Math.cos(angle)*100, y: cy + Math.sin(angle)*100 };
+  });
+
+  // Place system pods in outer ring
+  sysNs.forEach((n, i) => {
+    if (nodePositions[n.uid]) return;
+    const angle = (i / Math.max(sysNs.length,1)) * Math.PI * 2;
+    nodePositions[n.uid] = { x: cx + Math.cos(angle)*200, y: cy + Math.sin(angle)*200 };
+  });
+}
+
+function nodeRadius(n) {
+  if (n.namespace === 'default') return 22;
+  return 13;
+}
+
+function nodeColor(n) {
+  if (n.severity === 'critical') return '#ef4444';
+  if (n.severity === 'high') return '#f59e0b';
+  if (n.severity === 'medium') return '#eab308';
+  if (n.namespace !== 'default') return '#475569';
+  return '#22c55e';
+}
+
+let packetT = 0;
+
+function animLoop(ts) {
+  if (!animPaused) packetT = ts;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Grid
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.025)';
+  ctx.lineWidth = .5;
+  for (let x=0;x<canvas.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for (let y=0;y<canvas.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+  ctx.restore();
+
+  // Edges
+  gEdges.forEach(e => drawEdge(e, packetT));
+
+  // Nodes
+  gNodes.forEach(n => drawNode(n));
+
+  animFrame = requestAnimationFrame(animLoop);
+}
+
+function drawEdge(e, t) {
+  const fp = nodePositions[e.from], tp = nodePositions[e.to];
+  if (!fp || !tp) return;
+  const fn = gNodes.find(n=>n.uid===e.from), tn = gNodes.find(n=>n.uid===e.to);
+  if (!fn || !tn) return;
+
+  const dx=tp.x-fp.x, dy=tp.y-fp.y, dist=Math.sqrt(dx*dx+dy*dy);
+  if (dist<1) return;
+  const ux=dx/dist, uy=dy/dist;
+  const r1=nodeRadius(fn)+2, r2=nodeRadius(tn)+4;
+  const sx=fp.x+ux*r1, sy=fp.y+uy*r1;
+  const ex=tp.x-ux*r2, ey=tp.y-uy*r2;
+
+  ctx.save();
+  ctx.strokeStyle = e.color || '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = .7;
+  ctx.setLineDash([7,5]);
+  ctx.lineDashOffset = -(t * 0.035);
+  ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Arrowhead
+  const angle = Math.atan2(ey-sy,ex-sx);
+  ctx.globalAlpha = .85;
+  ctx.fillStyle = e.color || '#3b82f6';
+  ctx.beginPath();
+  ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-9*Math.cos(angle-.4),ey-9*Math.sin(angle-.4));
+  ctx.lineTo(ex-9*Math.cos(angle+.4),ey-9*Math.sin(angle+.4));
+  ctx.closePath(); ctx.fill();
+
+  // Edge label
+  if (e.type && e.type !== 'internal') {
+    const mx=(sx+ex)/2, my=(sy+ey)/2;
+    const nx=-uy, ny=ux;
+    ctx.globalAlpha = .8;
+    ctx.font = '9px SF Mono,monospace';
+    ctx.textAlign = 'center';
+    const tw = ctx.measureText(e.type).width;
+    ctx.fillStyle = 'rgba(10,14,26,.75)';
+    ctx.fillRect(mx+nx*12-tw/2-3, my+ny*12-7, tw+6, 13);
+    ctx.fillStyle = e.color || '#3b82f6';
+    ctx.fillText(e.type, mx+nx*12, my+ny*12+3);
+  }
+
+  // Animated packet on critical edges
+  if (e.type === 'T1552') {
+    const progress = ((t*0.0007) % 1);
+    const px = fp.x + (tp.x-fp.x)*progress;
+    const py = fp.y + (tp.y-fp.y)*progress;
+    ctx.globalAlpha = .9;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawNode(n) {
+  const pos = nodePositions[n.uid];
+  if (!pos) return;
+  const {x,y} = pos;
+  const r = nodeRadius(n);
+  const color = nodeColor(n);
+  const isSel = selPod === n.uid;
+
+  ctx.save();
+
+  // Glow for critical
+  if (n.severity === 'critical') {
+    const glow = ctx.createRadialGradient(x,y,r,x,y,r+18);
+    glow.addColorStop(0,'rgba(239,68,68,.2)');
+    glow.addColorStop(1,'rgba(239,68,68,0)');
+    ctx.beginPath(); ctx.arc(x,y,r+18,0,Math.PI*2);
+    ctx.fillStyle=glow; ctx.fill();
+  }
+
+  // Selection ring
+  if (isSel) {
+    ctx.beginPath(); ctx.arc(x,y,r+5,0,Math.PI*2);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.globalAlpha=.25; ctx.stroke();
+  }
+
+  // Circle
+  ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle = color+'20'; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Inner dot
+  ctx.beginPath(); ctx.arc(x,y,r*.35,0,Math.PI*2);
+  ctx.fillStyle=color; ctx.fill();
+
+  // Label
+  const label = n.name.length > 14 ? n.name.slice(0,13)+'…' : n.name;
+  ctx.fillStyle = '#e2e8f0'; ctx.font = '500 10px SF Mono,monospace';
+  ctx.textAlign = 'center'; ctx.globalAlpha = 1;
+  ctx.fillText(label, x, y+r+13);
+  ctx.fillStyle='#64748b'; ctx.font='8px SF Mono,monospace';
+  ctx.fillText(n.namespace, x, y+r+22);
+
+  ctx.restore();
+}
+
+// Dragging & tooltip
+canvas.addEventListener('mousedown', e => {
+  const {mx,my} = canvasMouse(e);
+  gNodes.forEach(n => {
+    const pos = nodePositions[n.uid];
+    if (!pos) return;
+    const dx=mx-pos.x, dy=my-pos.y;
+    if (Math.sqrt(dx*dx+dy*dy) < nodeRadius(n)+6) {
+      dragging = n.uid; dragOff={x:dx,y:dy};
+    }
+  });
+});
+
+canvas.addEventListener('mousemove', e => {
+  const {mx,my} = canvasMouse(e);
+  if (dragging) {
+    nodePositions[dragging] = {x:mx-dragOff.x, y:my-dragOff.y};
+  }
+
+  let hit = null;
+  gNodes.forEach(n => {
+    const pos = nodePositions[n.uid];
+    if (!pos) return;
+    const dx=mx-pos.x, dy=my-pos.y;
+    if (Math.sqrt(dx*dx+dy*dy) < nodeRadius(n)+6) hit = n;
+  });
+
+  const tt = document.getElementById('tt');
+  if (hit) {
+    tt.className = 'show';
+    tt.style.left = (e.clientX+14)+'px';
+    tt.style.top  = (e.clientY-10)+'px';
+    document.getElementById('tt-name').textContent  = hit.name;
+    document.getElementById('tt-ns').textContent    = hit.namespace;
+    document.getElementById('tt-uid').textContent   = (hit.uid||'').slice(0,20)+'…';
+    document.getElementById('tt-ip').textContent    = hit.ip || '—';
+    document.getElementById('tt-node').textContent  = hit.node || '—';
+    document.getElementById('tt-alerts').textContent= hit.alert_count || '0';
+  } else { tt.className = ''; }
+});
+
+canvas.addEventListener('mouseup', () => { dragging = null; });
+canvas.addEventListener('click', e => {
+  const {mx,my} = canvasMouse(e);
+  gNodes.forEach(n => {
+    const pos = nodePositions[n.uid];
+    if (!pos) return;
+    const dx=mx-pos.x, dy=my-pos.y;
+    if (Math.sqrt(dx*dx+dy*dy) < nodeRadius(n)+6) selPod = n.uid;
+  });
+});
+
+function canvasMouse(e) {
+  const r = canvas.getBoundingClientRect();
+  return {mx: e.clientX-r.left, my: e.clientY-r.top};
+}
+
+function resetLayout() { nodePositions={}; layoutNodes(); }
+function togglePause() {
+  animPaused = !animPaused;
+  document.getElementById('pause-btn').textContent = animPaused ? '▶ Resume' : '⏸ Pause';
+}
+
+// ── Refresh graph + stats every 5s ──
+setInterval(() => {
+  fetchStats();
+  fetchGraph();
+}, 5000);
+
+// ── Boot ──
+fetchAll().then(() => {
+  connectAlertStream();
+  connectEventStream();
+});
+</script>
+</body>
+</html>

@@ -129,29 +129,58 @@ def get_graph():
     # Build edges from alerts
     edges = []
     seen_edges = set()
+    
+    api_uid = next((u for u, m in pods.items() if m.get('name','').startswith('kube-apiserver')), None)
+    attacker_uid = next((u for u, m in pods.items() if m.get('name') == 'attacker'), None)
+    
     for alert in alerts:
         uid = alert.get('pod_uid')
         rule = alert.get('rule', '')
         if not uid:
             continue
-        if rule == 'T1552':
-            # attacker -> kube-apiserver
-            api_uid = next((u for u, m in pods.items() if m.get('name','').startswith('kube-apiserver')), None)
-            if api_uid:
-                key = (uid, api_uid, 'T1552')
-                if key not in seen_edges:
-                    seen_edges.add(key)
-                    edges.append({'from': uid, 'to': api_uid, 'type': 'T1552', 'color': '#ef4444'})
+        
+        if rule == 'T1552' and api_uid:
+            key = (uid, api_uid, 'T1552')
+            if key not in seen_edges:
+                seen_edges.add(key)
+                edges.append({'from': uid, 'to': api_uid, 'type': 'T1552', 'color': '#ef4444', 'label': 'secret access'})
+        
         elif rule == 'T1021':
-            target = alert.get('pod_name')
-            target_uid = next((u for u, m in pods.items() if m.get('name') == target), None)
-            if target_uid and uid != target_uid:
-                key = (uid, target_uid, 'T1021')
+            # admin -> attacker (draw as external node -> attacker)
+            target_pod = alert.get('pod_name')
+            target_uid = next((u for u, m in pods.items() if m.get('name') == target_pod), None)
+            if target_uid:
+                # Add a virtual "admin" node if not present
+                key = ('admin', target_uid, 'T1021')
                 if key not in seen_edges:
                     seen_edges.add(key)
-                    edges.append({'from': uid, 'to': target_uid, 'type': 'T1021', 'color': '#a855f7'})
+                    edges.append({'from': 'admin', 'to': target_uid, 'type': 'T1021', 'color': '#a855f7', 'label': 'kubectl exec'})
+        
+        elif rule == 'T1059' and uid:
+            # Self-loop: shell spawn inside the pod — draw as tetragon -> pod
+            tetragon_uid = next((u for u, m in pods.items() if m.get('name','').startswith('tetragon-x')), None)
+            if tetragon_uid:
+                key = (tetragon_uid, uid, 'T1059')
+                if key not in seen_edges:
+                    seen_edges.add(key)
+                    edges.append({'from': tetragon_uid, 'to': uid, 'type': 'T1059', 'color': '#f59e0b', 'label': 'shell spawn'})
 
-    return jsonify({'nodes': list(nodes.values()), 'edges': edges})
+    # Add virtual admin node to nodes list
+    admin_node = {
+        'uid': 'admin',
+        'name': 'kubectl-admin',
+        'namespace': 'external',
+        'ip': '172.18.0.1',
+        'node': 'host',
+        'severity': 'clean',
+        'alert_count': 0,
+        'virtual': True,
+    }
+    node_list = list(nodes.values())
+    if any(e.get('from') == 'admin' for e in edges):
+        node_list.append(admin_node)
+
+    return jsonify({'nodes': node_list, 'edges': edges})
 
 @app.route('/api/stats')
 def get_stats():

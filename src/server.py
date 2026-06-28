@@ -165,6 +165,15 @@ def get_graph():
                     seen_edges.add(key)
                     edges.append({'from': tetragon_uid, 'to': uid, 'type': 'T1059', 'color': '#f59e0b', 'label': 'shell spawn'})
 
+        elif rule == 'T1610' and uid:
+            # attacker -> dst pod (lateral network move)
+            dst_uid = alert.get('dst_pod_uid')
+            if dst_uid and dst_uid in pods:
+                key = (uid, dst_uid, 'T1610')
+                if key not in seen_edges:
+                    seen_edges.add(key)
+                    edges.append({'from': uid, 'to': dst_uid, 'type': 'T1610', 'color': '#06b6d4', 'label': 'net connect'})
+
     # Add virtual admin node to nodes list
     admin_node = {
         'uid': 'admin',

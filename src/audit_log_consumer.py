@@ -24,7 +24,7 @@ class AuditLogConsumer:
         log.info("Audit log consumer started")
 
     def _read_loop(self):
-        cmd = ["docker", "exec", "cage-control-plane",
+        cmd = ["docker", "exec", "desktop-control-plane",
                "tail", "-f", "-n", "0", "/var/log/kubernetes/audit.log"]
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -58,12 +58,11 @@ class AuditLogConsumer:
 
         events = []
 
-        # T1552: secret access
         if resource == "secrets" and verb in ("get", "list", "create", "patch", "delete"):
             pod_name, pod_uid, namespace = self._extract_pod_identity(obj, extra)
             if pod_name and pod_name not in ("legitimate-app",):
                 secret_name = obj.get("name", "<list>")
-                log.info(f"[AUDIT] secret {verb} by {username} | pod={pod_name} | secret={secret_name}")
+                log.info(f"[AUDIT] secret {verb} by {username} | pod={pod_name}")
                 events.append({
                     "timestamp": raw.get("requestReceivedTimestamp", datetime.now().isoformat()),
                     "event_type": "k8s_secret_access",
@@ -75,7 +74,6 @@ class AuditLogConsumer:
                     "pod_name": pod_name,
                 })
 
-        # T1021: pods/exec — remote execution into a pod (lateral movement)
         if resource == "pods" and subresource == "exec" and verb == "get":
             target_pod = obj.get("name", "")
             namespace = obj.get("namespace", "default")
@@ -100,8 +98,4 @@ class AuditLogConsumer:
         pod_uid_list = extra.get("authentication.kubernetes.io/pod-uid", [])
         pod_name = pod_name_list[0] if pod_name_list else None
         pod_uid = pod_uid_list[0] if pod_uid_list else None
-        if pod_uid:
-            meta = self.cache.get_meta(pod_uid)
-            if meta:
-                namespace = meta["ns"]
         return pod_name, pod_uid, namespace

@@ -184,26 +184,12 @@ setInterval(() => { document.getElementById('clock').textContent = new Date().to
 let gNodes=[], gEdges=[], alerts=[], evtCount=0, evtMinBucket=0, animPaused=false, selPod=null;
 let nodePositions={}, dragging=null, dragOff={x:0,y:0}, animFrame;
 
-// Fixed layout positions - percentages of canvas size
+// Fixed layout positions for the attack chain - these are percentages of canvas size
 const FIXED_LAYOUT = {
-  'admin':        {xp:0.10, yp:0.50, role:'external'},
-  'attacker':     {xp:0.42, yp:0.50, role:'attacker'},
-  'kube-api':     {xp:0.75, yp:0.50, role:'target'},
+  'admin':        {xp:0.12, yp:0.5,  role:'external'},
+  'attacker':     {xp:0.42, yp:0.5,  role:'attacker'},
+  'kube-api':     {xp:0.72, yp:0.5,  role:'target'},
   'tetragon':     {xp:0.42, yp:0.18, role:'sensor'},
-  // Push all system/noise pods to bottom-right quadrant cluster
-  'coredns-1':    {xp:0.82, yp:0.72, role:'system'},
-  'coredns-2':    {xp:0.90, yp:0.80, role:'system'},
-  'etcd':         {xp:0.88, yp:0.65, role:'system'},
-  'kindnet':      {xp:0.96, yp:0.72, role:'system'},
-  'kube-ctrl':    {xp:0.82, yp:0.88, role:'system'},
-  'kube-proxy':   {xp:0.90, yp:0.58, role:'system'},
-  'kube-sched':   {xp:0.96, yp:0.85, role:'system'},
-  'tet-op':       {xp:0.88, yp:0.92, role:'system'},
-  'local-path':   {xp:0.96, yp:0.92, role:'system'},
-  // Legitimate-app and password-analyzers bottom-left
-  'legit-app':    {xp:0.25, yp:0.80, role:'clean'},
-  'pw-ana-1':     {xp:0.10, yp:0.72, role:'clean'},
-  'pw-ana-2':     {xp:0.10, yp:0.85, role:'clean'},
 };
 
 const canvas = document.getElementById('graph-canvas');
@@ -216,20 +202,8 @@ resize();
 function getFixedKey(node){
   if(node.uid==='admin') return 'admin';
   if(node.name==='attacker') return 'attacker';
-  if(node.name&&node.name.startsWith('kube-apiserver-')) return 'kube-api';
+  if(node.name&&node.name.startsWith('kube-apiserver')) return 'kube-api';
   if(node.name&&node.name.startsWith('tetragon-x')) return 'tetragon';
-  if(node.name&&node.name.startsWith('coredns-')&&node.name.endsWith('rdz7p')) return 'coredns-1';
-  if(node.name&&node.name.startsWith('coredns-')&&node.name.endsWith('z2qn7')) return 'coredns-2';
-  if(node.name&&node.name.startsWith('etcd-')) return 'etcd';
-  if(node.name&&node.name.startsWith('kindnet-')) return 'kindnet';
-  if(node.name&&node.name.startsWith('kube-controller-')) return 'kube-ctrl';
-  if(node.name&&node.name.startsWith('kube-proxy-')) return 'kube-proxy';
-  if(node.name&&node.name.startsWith('kube-scheduler-')) return 'kube-sched';
-  if(node.name&&node.name.startsWith('tetragon-operator-')) return 'tet-op';
-  if(node.name&&node.name.startsWith('local-path-')) return 'local-path';
-  if(node.name==='legitimate-app') return 'legit-app';
-  if(node.name&&node.name.endsWith('mzh6v')) return 'pw-ana-1';
-  if(node.name&&node.name.endsWith('xcv4s')) return 'pw-ana-2';
   return null;
 }
 

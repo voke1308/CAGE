@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: cage-tcp-connect
+spec:
+  kprobes:
+  - call: "tcp_connect"
+    syscall: false
+    return: false
+    args:
+    - index: 0
+      type: "sock"

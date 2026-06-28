@@ -39,6 +39,14 @@ class PodUIDCache:
         with self._lock:
             return self._uid_to_meta.get(uid)
 
+    def get_meta_by_ip(self, ip: str):
+        """Lookup pod metadata by pod IP address."""
+        with self._lock:
+            uid = self._ip_to_uid.get(ip)
+            if uid:
+                return self.get_meta(uid)
+        return None
+
     def snapshot(self):
         with self._lock:
             return dict(self._uid_to_meta)

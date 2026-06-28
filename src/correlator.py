@@ -35,6 +35,9 @@ class Correlator:
                 self.alert_list.extend(alerts)
             except queue.Empty:
                 pass
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
 
     def get_alerts(self):
         return self.alert_list.copy()

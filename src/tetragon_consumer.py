@@ -172,7 +172,6 @@ class TetragonConsumer:
         # Filter: only pod-network source IPs (10.244.x.x)
         if not saddr.startswith("10.244."):
             return None
-        log.info(f"[KPROBE] tcp_connect {saddr}:{sport} -> {daddr}:{dport}")
 
         # Filter out loopback and control-plane noise
         if daddr.startswith("127.") or daddr.startswith("172.18.") or daddr.startswith("::"):

@@ -133,6 +133,12 @@ class TetragonConsumer:
                             if tagged.get("pod_uid"):
                                 log.info(f"[QUEUED] {tagged['namespace']}/{tagged['pod_name']} | {tagged['binary']}")
 
+                    if "process_kprobe" in raw:
+                        tagged = self._tag_network_event(raw)
+                        if tagged:
+                            self.out_queue.put(tagged)
+                            log.info(f"[NET] {tagged['namespace']}/{tagged['pod_name']} -> {tagged['dst_ip']}:{tagged['dst_port']}")
+
                     if self.event_count % 200 == 0:
                         log.info(f"Processed {self.event_count} events")
 
@@ -142,6 +148,70 @@ class TetragonConsumer:
                     log.warning(f"Event error: {e}")
         except Exception as e:
             log.error(f"Stream error: {e}")
+
+    def _tag_network_event(self, raw: dict):
+        """Parse tcp_connect kprobe events into network_connect telemetry."""
+        pk = raw.get("process_kprobe", {})
+        if pk.get("function_name") != "tcp_connect":
+            return None
+
+        # Extract sock_arg
+        sock = None
+        for a in pk.get("args", []):
+            if "sock_arg" in a:
+                sock = a["sock_arg"]
+                break
+        if not sock:
+            return None
+
+        saddr = sock.get("saddr", "")
+        daddr = sock.get("daddr", "")
+        dport = sock.get("dport", 0)
+        sport = sock.get("sport", 0)
+
+        # Filter: only pod-network source IPs (10.244.x.x)
+        if not saddr.startswith("10.244."):
+            return None
+        log.info(f"[KPROBE] tcp_connect {saddr}:{sport} -> {daddr}:{dport}")
+
+        # Filter out loopback and control-plane noise
+        if daddr.startswith("127.") or daddr.startswith("172.18.") or daddr.startswith("::"):
+            return None
+
+        # Resolve src IP -> pod UID using IP index
+        src_meta = self.cache.get_meta_by_ip(saddr)
+        if not src_meta:
+            return None
+
+        # get_meta_by_ip returns {name, ns, ip, sa, node} — get uid via IP lookup
+        src_uid = self.cache.resolve_by_ip(saddr)
+        if not src_uid:
+            return None
+
+        # Skip if source is a system namespace pod
+        if src_meta.get("ns") in ("kube-system", "local-path-storage"):
+            return None
+
+        # Resolve dst IP -> pod name if it's a known pod
+        dst_uid = self.cache.resolve_by_ip(daddr)
+        dst_meta = self.cache.get_meta(dst_uid) if dst_uid else None
+        dst_pod_name = dst_meta["name"] if dst_meta else daddr
+
+        return {
+            "timestamp": raw.get("time", datetime.now().isoformat()),
+            "event_type": "network_connect",
+            "node": raw.get("node_name", ""),
+            "pod_uid": src_uid,
+            "pod_name": src_meta["name"],
+            "namespace": src_meta["ns"],
+            "src_ip": saddr,
+            "src_port": sport,
+            "dst_ip": daddr,
+            "dst_port": dport,
+            "dst_pod_name": dst_pod_name,
+            "dst_pod_uid": dst_uid,
+            "binary": pk.get("process", {}).get("binary", ""),
+        }
 
     def _tag_event(self, raw: dict):
         if "process_exec" not in raw:

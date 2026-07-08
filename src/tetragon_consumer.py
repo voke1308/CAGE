@@ -134,10 +134,17 @@ class TetragonConsumer:
                                 log.info(f"[QUEUED] {tagged['namespace']}/{tagged['pod_name']} | {tagged['binary']}")
 
                     if "process_kprobe" in raw:
-                        tagged = self._tag_network_event(raw)
-                        if tagged:
-                            self.out_queue.put(tagged)
-                            log.info(f"[NET] {tagged['namespace']}/{tagged['pod_name']} -> {tagged['dst_ip']}:{tagged['dst_port']}")
+                        fn = raw["process_kprobe"].get("function_name")
+                        if fn == "tcp_connect":
+                            tagged = self._tag_network_event(raw)
+                            if tagged:
+                                self.out_queue.put(tagged)
+                                log.info(f"[NET] {tagged['namespace']}/{tagged['pod_name']} -> {tagged['dst_ip']}:{tagged['dst_port']}")
+                        elif fn == "cap_capable":
+                            tagged = self._tag_capability_event(raw)
+                            if tagged:
+                                self.out_queue.put(tagged)
+                                log.info(f"[CAP] {tagged['namespace']}/{tagged['pod_name']} requested {tagged['capability']}")
 
                     if self.event_count % 200 == 0:
                         log.info(f"Processed {self.event_count} events")
@@ -210,6 +217,51 @@ class TetragonConsumer:
             "dst_pod_name": dst_pod_name,
             "dst_pod_uid": dst_uid,
             "binary": pk.get("process", {}).get("binary", ""),
+        }
+
+    CAPABILITY_NAMES = {
+        16: "CAP_SYS_MODULE",
+        19: "CAP_SYS_PTRACE",
+        21: "CAP_SYS_ADMIN",
+        22: "CAP_SYS_BOOT",
+    }
+
+    def _tag_capability_event(self, raw: dict):
+        """Parse cap_capable kprobe events (dangerous capability checks) into
+        capability_check telemetry — a kernel-level container-escape signal
+        that doesn't depend on recognizing a specific binary name."""
+        pk = raw.get("process_kprobe", {})
+        proc = pk.get("process", {})
+        if not proc:
+            return None
+
+        cap_value = None
+        for a in pk.get("args", []):
+            if "int_arg" in a:
+                cap_value = a["int_arg"]
+                break
+        if cap_value is None:
+            return None
+
+        cap_name = self.CAPABILITY_NAMES.get(cap_value)
+        if not cap_name:
+            return None
+
+        pod_uid, pod_name, namespace = self._resolve_uid(proc)
+        if not pod_uid:
+            return None
+        if namespace in ("kube-system", "local-path-storage"):
+            return None
+
+        return {
+            "timestamp": raw.get("time", datetime.now().isoformat()),
+            "event_type": "capability_check",
+            "node": raw.get("node_name", ""),
+            "pod_uid": pod_uid,
+            "pod_name": pod_name,
+            "namespace": namespace,
+            "capability": cap_name,
+            "binary": proc.get("binary", ""),
         }
 
     def _tag_event(self, raw: dict):

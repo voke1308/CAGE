@@ -9,6 +9,37 @@ log = logging.getLogger("causal-graph")
 SHELL_WHITELIST_NAMESPACES = {"kube-system", "local-path-storage"}
 SHELL_WHITELIST_POD_PREFIXES = ("legitimate-app", "debug-", "init-", "victim")
 
+# --- Container escape (T1611) ---
+ESCAPE_BINARIES = {
+    "/usr/bin/nsenter", "/bin/nsenter",
+    "/usr/bin/unshare", "/bin/unshare",
+    "/usr/sbin/chroot", "/bin/chroot", "/usr/bin/chroot",
+    "/usr/bin/capsh", "/bin/capsh",
+}
+ESCAPE_ARG_INDICATORS = (
+    "docker.sock", "containerd.sock", "/proc/1/root", "/proc/1/ns",
+    "/var/lib/docker", "core_pattern", "release_agent",
+)
+DANGEROUS_CAPABILITIES = {
+    "CAP_SYS_ADMIN", "CAP_SYS_PTRACE", "CAP_SYS_MODULE",
+    "CAP_SYS_BOOT", "CAP_DAC_READ_SEARCH", "CAP_SYS_RAWIO",
+}
+
+# --- Privilege escalation (T1548) ---
+PRIV_ESC_BINARIES = {
+    "/usr/bin/sudo", "/bin/sudo",
+    "/usr/bin/su", "/bin/su",
+    "/usr/sbin/setcap", "/sbin/setcap", "/usr/bin/setcap",
+}
+
+# --- Resource abuse / DoS (T1499 fork-bomb, T1496 cryptomining) ---
+CRYPTOMINING_INDICATORS = (
+    "xmrig", "minerd", "cpuminer", "ethminer", "cgminer",
+    "stratum+tcp", "nanominer", "teamredminer",
+)
+FORK_BOMB_EXEC_THRESHOLD = 25      # execs from the same pod...
+FORK_BOMB_WINDOW_SECONDS = 10      # ...within this many seconds
+
 class CausalGraph:
     def __init__(self):
         self._lock = threading.RLock()
@@ -16,12 +47,16 @@ class CausalGraph:
         self.alerts = []
         self._event_window = {}
         self._fired_chains = set()
+        self._exec_burst = {}       # pod_uid -> [timestamps] for fork-bomb detection
 
     def add_event(self, event: dict) -> list:
         with self._lock:
             alerts = []
 
-            for check in (self._check_t1059, self._check_t1021, self._check_t1552, self._check_t1610):
+            for check in (self._check_t1059, self._check_t1021, self._check_t1552, self._check_t1610,
+                          self._check_t1611_escape, self._check_t1548_privesc,
+                          self._check_resource_abuse, self._check_privileged_pod,
+                          self._check_rbac_abuse, self._check_rbac_discovery):
                 alert = check(event)
                 if alert:
                     alerts.append(alert)
@@ -129,6 +164,157 @@ class CausalGraph:
             "timestamp": event.get("timestamp"),
         }
 
+    def _check_t1611_escape(self, event):
+        """Container escape: escape-tool binaries, or args touching host runtime
+        sockets / cgroup release_agent / proc-based host filesystem access, or
+        exec requesting a dangerous kernel capability."""
+        if event.get("event_type") == "capability_check":
+            if event.get("capability") in DANGEROUS_CAPABILITIES and not self._is_whitelisted(event):
+                log.warning(f"[HIGH] T1611: dangerous capability {event.get('capability')} "
+                            f"requested by {event.get('namespace')}/{event.get('pod_name')}")
+                return {
+                    "severity": "HIGH", "rule": "T1611",
+                    "description": f"Container escape indicator: process requested {event.get('capability')}",
+                    "pod_uid": event.get("pod_uid"), "pod_name": event.get("pod_name"),
+                    "namespace": event.get("namespace"), "timestamp": event.get("timestamp"),
+                }
+            return None
+
+        if event.get("event_type") != "process_exec":
+            return None
+        if not event.get("pod_uid") or self._is_whitelisted(event):
+            return None
+
+        binary = event.get("binary", "")
+        args = event.get("arguments", "") or ""
+        hit_binary = binary in ESCAPE_BINARIES
+        hit_arg = any(ind in args for ind in ESCAPE_ARG_INDICATORS)
+        if not (hit_binary or hit_arg):
+            return None
+
+        log.warning(f"[HIGH] T1611: escape indicator '{binary} {args}' in "
+                    f"{event.get('namespace')}/{event.get('pod_name')}")
+        return {
+            "severity": "HIGH", "rule": "T1611",
+            "description": "Container escape indicator: namespace/host-runtime tooling or "
+                            "host filesystem escape path used inside container",
+            "pod_uid": event["pod_uid"], "pod_name": event.get("pod_name"),
+            "namespace": event.get("namespace"), "binary": binary,
+            "timestamp": event.get("timestamp"),
+        }
+
+    def _check_t1548_privesc(self, event):
+        """Privilege escalation via sudo/su/setcap inside a container."""
+        if event.get("event_type") != "process_exec":
+            return None
+        if not event.get("pod_uid") or self._is_whitelisted(event):
+            return None
+        binary = event.get("binary", "")
+        if binary not in PRIV_ESC_BINARIES:
+            return None
+        log.warning(f"[HIGH] T1548: privilege escalation attempt '{binary}' in "
+                    f"{event.get('namespace')}/{event.get('pod_name')}")
+        return {
+            "severity": "HIGH", "rule": "T1548",
+            "description": f"Privilege escalation attempt inside container ({binary})",
+            "pod_uid": event["pod_uid"], "pod_name": event.get("pod_name"),
+            "namespace": event.get("namespace"), "binary": binary,
+            "timestamp": event.get("timestamp"),
+        }
+
+    def _check_resource_abuse(self, event):
+        """Resource abuse / DoS: known cryptominer binaries, or a fork-bomb-like
+        burst of process_exec events from a single pod in a short window."""
+        if event.get("event_type") != "process_exec":
+            return None
+        if not event.get("pod_uid") or self._is_whitelisted(event):
+            return None
+
+        binary = (event.get("binary") or "").lower()
+        args = (event.get("arguments") or "").lower()
+        if any(ind in binary or ind in args for ind in CRYPTOMINING_INDICATORS):
+            log.warning(f"[HIGH] T1496: cryptomining indicator in "
+                        f"{event.get('namespace')}/{event.get('pod_name')}")
+            return {
+                "severity": "HIGH", "rule": "T1496",
+                "description": "Resource hijacking indicator: cryptomining process signature",
+                "pod_uid": event["pod_uid"], "pod_name": event.get("pod_name"),
+                "namespace": event.get("namespace"), "binary": event.get("binary"),
+                "timestamp": event.get("timestamp"),
+            }
+
+        pod_uid = event["pod_uid"]
+        ts_raw = event.get("timestamp")
+        if not ts_raw:
+            return None
+        try:
+            ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+        window = self._exec_burst.setdefault(pod_uid, [])
+        window.append(ts)
+        cutoff = ts - timedelta(seconds=FORK_BOMB_WINDOW_SECONDS)
+        self._exec_burst[pod_uid] = [t for t in window if t > cutoff]
+
+        if len(self._exec_burst[pod_uid]) >= FORK_BOMB_EXEC_THRESHOLD:
+            burst_key = (pod_uid, "T1499_BURST")
+            if burst_key in self._fired_chains:
+                return None
+            self._fired_chains.add(burst_key)
+            log.warning(f"[HIGH] T1499: fork-bomb-like exec burst in "
+                        f"{event.get('namespace')}/{event.get('pod_name')}")
+            return {
+                "severity": "HIGH", "rule": "T1499",
+                "description": f"Endpoint DoS indicator: {len(self._exec_burst[pod_uid])} "
+                                f"process executions within {FORK_BOMB_WINDOW_SECONDS}s (possible fork bomb)",
+                "pod_uid": pod_uid, "pod_name": event.get("pod_name"),
+                "namespace": event.get("namespace"), "timestamp": event.get("timestamp"),
+            }
+        return None
+
+    def _check_privileged_pod(self, event):
+        """Privileged workload deployed (from K8s audit log pod-create inspection)."""
+        if event.get("event_type") != "privileged_pod_created":
+            return None
+        log.warning(f"[HIGH] T1548: privileged pod created "
+                    f"{event.get('namespace')}/{event.get('pod_name')} ({event.get('reason')})")
+        return {
+            "severity": "HIGH", "rule": "T1548-PRIV-POD",
+            "description": f"Privileged workload deployed: {event.get('reason')}",
+            "pod_uid": event.get("pod_uid"), "pod_name": event.get("pod_name"),
+            "namespace": event.get("namespace"), "user": event.get("user"),
+            "timestamp": event.get("timestamp"),
+        }
+
+    def _check_rbac_abuse(self, event):
+        """RBAC abuse: binding to cluster-admin, wildcard Role/ClusterRole,
+        or impersonation/token-request against another identity."""
+        if event.get("event_type") != "rbac_abuse":
+            return None
+        log.warning(f"[CRITICAL] RBAC-ABUSE: {event.get('reason')} by {event.get('user')}")
+        return {
+            "severity": "CRITICAL", "rule": "T1548.005",
+            "description": f"RBAC abuse: {event.get('reason')}",
+            "pod_uid": event.get("pod_uid"), "pod_name": event.get("pod_name", "<cluster>"),
+            "namespace": event.get("namespace", "cluster-wide"), "user": event.get("user"),
+            "timestamp": event.get("timestamp"),
+        }
+
+    def _check_rbac_discovery(self, event):
+        """Discovery: burst of get/list calls on RBAC objects by one identity."""
+        if event.get("event_type") != "rbac_discovery":
+            return None
+        log.warning(f"[MEDIUM] T1613: RBAC/resource discovery burst by {event.get('user')}")
+        return {
+            "severity": "MEDIUM", "rule": "T1613",
+            "description": f"Container and resource discovery: {event.get('count')} RBAC "
+                            f"reads by {event.get('user')} in {event.get('window_seconds')}s",
+            "pod_uid": event.get("pod_uid"), "pod_name": event.get("pod_name", "<cluster>"),
+            "namespace": event.get("namespace", "cluster-wide"), "user": event.get("user"),
+            "timestamp": event.get("timestamp"),
+        }
+
     def _check_chains(self, event) -> list:
         pod_uid = event.get("pod_uid")
         if not pod_uid or pod_uid not in self._event_window:
@@ -185,6 +371,38 @@ class CausalGraph:
                 "pod_name": event.get("pod_name"),
                 "namespace": event.get("namespace"),
                 "timestamp": event.get("timestamp"),
+            })
+
+        has_t1611 = bool(binaries & ESCAPE_BINARIES) or any(
+            any(ind in (e.get("arguments") or "") for ind in ESCAPE_ARG_INDICATORS)
+            for _, e in events
+        )
+        has_t1548 = bool(binaries & PRIV_ESC_BINARIES)
+
+        # Escalation chain: shell -> privilege escalation -> container escape
+        chain_key_5 = (pod_uid, "T1059->T1548->T1611")
+        if has_t1059 and has_t1548 and has_t1611 and chain_key_5 not in self._fired_chains:
+            self._fired_chains.add(chain_key_5)
+            log.warning(f"[CRITICAL] T1059→T1548→T1611 ESCALATION CHAIN on "
+                        f"{event.get('namespace')}/{event.get('pod_name')}")
+            alerts.append({
+                "severity": "CRITICAL", "rule": "T1059->T1548->T1611",
+                "description": "Shell access, privilege escalation, then container escape attempt",
+                "pod_uid": pod_uid, "pod_name": event.get("pod_name"),
+                "namespace": event.get("namespace"), "timestamp": event.get("timestamp"),
+            })
+
+        # Breakout chain: container escape -> credential theft on the node
+        chain_key_6 = (pod_uid, "T1611->T1552")
+        if has_t1611 and has_t1552 and chain_key_6 not in self._fired_chains:
+            self._fired_chains.add(chain_key_6)
+            log.warning(f"[CRITICAL] T1611→T1552 BREAKOUT CHAIN on "
+                        f"{event.get('namespace')}/{event.get('pod_name')}")
+            alerts.append({
+                "severity": "CRITICAL", "rule": "T1611->T1552",
+                "description": "Container escape indicator followed by credential access",
+                "pod_uid": pod_uid, "pod_name": event.get("pod_name"),
+                "namespace": event.get("namespace"), "timestamp": event.get("timestamp"),
             })
 
         return alerts

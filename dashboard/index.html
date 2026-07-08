@@ -102,6 +102,26 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
 .tt-title{font-weight:600;font-size:11px;margin-bottom:5px}
 .tt-row{color:var(--text2);margin-bottom:2px}
 .tt-row span{color:var(--text3)}
+.spark-wrap{padding:8px 16px 6px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.spark-hd{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+#spark-canvas{width:100%;height:34px;display:block}
+.chain-hist{max-height:130px;overflow-y:auto;border-bottom:1px solid var(--border);flex-shrink:0}
+.chain-hist-empty{padding:14px 12px;font-size:10px;color:var(--text3);text-align:center}
+.ch-item{padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.03);font-size:9px}
+.ch-steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px}
+.ch-step{padding:1px 5px;border-radius:3px;font-weight:700;font-size:9px}
+.ch-arrow{color:var(--text3);font-size:9px}
+.ch-meta{display:flex;justify-content:space-between;color:var(--text3);font-size:8px}
+.ch-pod{color:var(--text2)}
+.pod-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-right:4px;display:inline-block}
+.pod-item.expanded{background:var(--bg3)}
+.pod-expand{padding:8px 14px 10px 14px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);font-size:9px;color:var(--text2)}
+.pe-row{display:flex;justify-content:space-between;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.04)}
+.pe-row:last-child{border:0;margin:0;padding:0}
+.pe-label{color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-size:8px}
+.pe-val{color:var(--text);text-align:right;max-width:60%}
+.pe-techs{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end}
+.pe-tech{background:rgba(255,255,255,.05);border:1px solid var(--border2);padding:1px 4px;border-radius:2px;font-size:8px;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -134,11 +154,15 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
 </div>
 <div class="metrics">
   <div class="metric"><div class="mv crit" id="m-crit">0</div><div><div class="ml">Critical</div><div class="md">chains</div></div></div>
-  <div class="metric"><div class="mv high" id="m-high">0</div><div><div class="ml">High</div><div class="md">T1552</div></div></div>
-  <div class="metric"><div class="mv med" id="m-med">0</div><div><div class="ml">Medium</div><div class="md">T1059/T1021</div></div></div>
+  <div class="metric"><div class="mv high" id="m-high">0</div><div><div class="ml">High</div><div class="md">T1552/T1611/T1548/T1496/T1499</div></div></div>
+  <div class="metric"><div class="mv med" id="m-med">0</div><div><div class="ml">Medium</div><div class="md">T1059/T1021/T1613</div></div></div>
   <div class="metric"><div class="mv ok" id="m-fp">0</div><div><div class="ml">False Positives</div><div class="md">precision 100%</div></div></div>
   <div class="metric"><div class="mv blue" id="m-pods">0</div><div><div class="ml">Pods Tracked</div><div class="md" id="md-pods">live</div></div></div>
   <div class="metric"><div class="mv blue" id="m-evts">0</div><div><div class="ml">Events/min</div><div class="md">live</div></div></div>
+</div>
+<div class="spark-wrap">
+  <div class="spark-hd"><span>Alert Volume (last 5 min)</span><span>CRITICAL / HIGH / MEDIUM</span></div>
+  <canvas id="spark-canvas"></canvas>
 </div>
 <div class="main">
   <div class="left">
@@ -153,10 +177,16 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
       <div class="li"><div class="li-dot" style="background:#22c55e"></div>Clean pod</div>
       <div class="li"><div class="li-dot" style="background:#64748b"></div>System/External</div>
       <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
-        <div class="li"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
-        <div class="li"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
-        <div class="li"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
-        <div class="li"><div class="li-line" style="background:#06b6d4"></div>T1610 network</div>
+        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
+        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
+        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
+        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#06b6d4"></div>T1610 network</div>
+      </div>
+      <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
+        <div class="li" title="Attacker breaks out of container isolation to reach the host"><div class="li-dot" style="background:#ef4444"></div>T1611 escape</div>
+        <div class="li" title="Attacker gains higher privileges inside a container (sudo, setcap, capabilities)"><div class="li-dot" style="background:#f97316"></div>T1548 priv-esc</div>
+        <div class="li" title="Excessive resource use — fork bomb or cryptomining"><div class="li-dot" style="background:#eab308"></div>T1496/T1499 abuse</div>
+        <div class="li" title="Attacker grants themselves excessive Kubernetes permissions (cluster-admin, wildcard roles)"><div class="li-dot" style="background:#ec4899"></div>T1548.005 RBAC</div>
       </div>
     </div>
     <div class="graph-controls">
@@ -165,6 +195,8 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     </div>
   </div>
   <div class="right">
+    <div class="ph">Chain History <span id="chain-count">0 chains</span></div>
+    <div class="chain-hist" id="chain-hist"><div class="chain-hist-empty">No attack chains detected yet</div></div>
     <div class="ph">Alert Feed <span id="alert-count">0 alerts</span></div>
     <div class="alert-list" id="alert-list"></div>
     <div class="ph">Live Event Stream <span id="evt-count">0 events</span></div>
@@ -184,6 +216,35 @@ setInterval(() => { document.getElementById('clock').textContent = new Date().to
 
 let gNodes=[], gEdges=[], alerts=[], evtCount=0, evtMinBucket=0, animPaused=false, selPod=null;
 let nodePositions={}, dragging=null, dragOff={x:0,y:0}, animFrame;
+let chainHistory=[], expandedPod=null;
+const podColorMap={};
+const POD_PALETTE=['#38bdf8','#f472b6','#a3e635','#fb923c','#c084fc','#2dd4bf','#facc15','#818cf8'];
+let podColorIdx=0;
+function podColor(key){
+  if(!podColorMap[key]){podColorMap[key]=POD_PALETTE[podColorIdx%POD_PALETTE.length];podColorIdx++;}
+  return podColorMap[key];
+}
+
+const MITRE_DESC={
+  'T1059':'Execution: a shell process spawned inside a container',
+  'T1021':'Remote exec: someone ran kubectl exec into this pod',
+  'T1552':'Credential Access: a Kubernetes secret was read via the API',
+  'T1610':'Lateral Movement: this pod opened a TCP connection to another pod',
+  'T1611':'Escape to Host: container-escape tooling or host-runtime paths were used inside the container',
+  'T1548':'Privilege Escalation: sudo/su/setcap used inside the container',
+  'T1548-PRIV-POD':'Privilege Escalation: a pod was deployed with privileged/host-namespace settings',
+  'T1548.005':'RBAC Abuse: a Role/ClusterRoleBinding grants excessive Kubernetes permissions',
+  'T1496':'Resource Hijacking: cryptomining process signature detected',
+  'T1499':'Endpoint DoS: fork-bomb-like burst of process executions',
+  'T1613':'Discovery: a burst of RBAC object reads (role/binding enumeration)',
+};
+function ruleTitle(rule){
+  if(!rule) return '';
+  if(rule.includes('->')){
+    return rule.split('->').map(r=>`${r}: ${MITRE_DESC[r]||'chained technique'}`).join('\n');
+  }
+  return MITRE_DESC[rule]||'';
+}
 
 // Fixed layout positions - percentages of canvas size
 const FIXED_LAYOUT = {
@@ -472,6 +533,13 @@ async function fetchAll(){
     renderPodList(graph.nodes);
     initGraph(graph.nodes,graph.edges);
     renderAlerts(alerts.slice().reverse());
+    chainHistory=alerts.filter(a=>a.severity==='CRITICAL'&&a.rule&&a.rule.includes('->'))
+      .slice().reverse().slice(0,25)
+      .map(a=>({rule:a.rule,pod:`${a.namespace}/${a.pod_name}`,
+        ts:a.timestamp?new Date(a.timestamp).toTimeString().slice(0,8):'—',desc:a.description||''}));
+    renderChainHistory();
+    alerts.forEach(a=>{const b=sparkData[SPARK_BUCKETS-1];if(a.severity)b[a.severity]=(b[a.severity]||0);});
+    drawSpark();
     document.getElementById('conn-status').textContent='LIVE';
     document.getElementById('conn-status').className='live';
   }catch(e){
@@ -490,7 +558,13 @@ function connectAlertStream(){
       document.getElementById('chain-banner').classList.add('show');
       document.getElementById('chain-pod').textContent=`${alert.namespace}/${alert.pod_name}`;
       document.getElementById('chain-ts').textContent=new Date().toTimeString().slice(0,8);
+      chainHistory.unshift({rule:alert.rule,pod:`${alert.namespace}/${alert.pod_name}`,
+        ts:alert.timestamp?new Date(alert.timestamp).toTimeString().slice(0,8):new Date().toTimeString().slice(0,8),
+        desc:alert.description||''});
+      if(chainHistory.length>25) chainHistory.pop();
+      renderChainHistory();
     }
+    sparkAdd(alert.severity);
     fetchStats();fetchGraph();
     document.getElementById('conn-status').textContent='LIVE';
     document.getElementById('conn-status').className='live';
@@ -532,6 +606,82 @@ const SYSTEM_NS=new Set(['kube-system','local-path-storage','kube-node-lease']);
 
 function podInitials(name){return name.replace(/-[a-z0-9]{5,}$/,'').slice(0,2).toUpperCase();}
 
+function chainStepClass(step){
+  if(step==='T1021') return 'cs-t1021';
+  if(step==='T1059') return 'cs-t1059';
+  if(step==='T1552') return 'cs-t1552';
+  if(step==='T1611') return 'cs-t1552';
+  if(step==='T1548') return 'cs-t1021';
+  return 'cs-t1059';
+}
+function renderChainHistory(){
+  const el=document.getElementById('chain-hist');
+  document.getElementById('chain-count').textContent=chainHistory.length+' chains';
+  if(chainHistory.length===0){el.innerHTML='<div class="chain-hist-empty">No attack chains detected yet</div>';return;}
+  el.innerHTML='';
+  chainHistory.forEach(c=>{
+    const steps=c.rule.split('->');
+    const dotColor=podColor(c.pod);
+    const div=document.createElement('div');div.className='ch-item';
+    div.innerHTML=`
+      <div class="ch-steps">${steps.map((s,i)=>
+        `<span class="chain-step ${chainStepClass(s)}" title="${MITRE_DESC[s]||''}">${s}</span>${i<steps.length-1?'<span class="ch-arrow">→</span>':''}`
+      ).join('')}</div>
+      <div class="ch-meta"><span class="ch-pod"><span class="pod-dot" style="background:${dotColor}"></span>${c.pod}</span><span>${c.ts}</span></div>`;
+    el.appendChild(div);
+  });
+}
+
+// Sparkline: rolling 5-minute window, 10s buckets
+const SPARK_BUCKET_MS=10000, SPARK_BUCKETS=30;
+let sparkData=Array.from({length:SPARK_BUCKETS},()=>({CRITICAL:0,HIGH:0,MEDIUM:0}));
+function sparkAdd(sev){
+  if(!sparkData[SPARK_BUCKETS-1][sev]&&sparkData[SPARK_BUCKETS-1][sev]!==0) return;
+  sparkData[SPARK_BUCKETS-1][sev]=(sparkData[SPARK_BUCKETS-1][sev]||0)+1;
+  drawSpark();
+}
+function sparkTick(){
+  sparkData.shift();
+  sparkData.push({CRITICAL:0,HIGH:0,MEDIUM:0});
+  drawSpark();
+}
+const sparkCanvas=document.getElementById('spark-canvas');
+const sparkCtx=sparkCanvas.getContext('2d');
+function drawSpark(){
+  const W=sparkCanvas.offsetWidth,H=34;
+  sparkCanvas.width=W;sparkCanvas.height=H;
+  sparkCtx.clearRect(0,0,W,H);
+  const barW=W/SPARK_BUCKETS;
+  const maxTotal=Math.max(1,...sparkData.map(b=>b.CRITICAL+b.HIGH+b.MEDIUM));
+  sparkData.forEach((b,i)=>{
+    const x=i*barW+1;
+    let y=H;
+    const segs=[['CRITICAL','#ef4444'],['HIGH','#f59e0b'],['MEDIUM','#eab308']];
+    segs.forEach(([key,color])=>{
+      const v=b[key]||0;
+      if(v===0) return;
+      const h=(v/maxTotal)*(H-2);
+      sparkCtx.fillStyle=color;
+      sparkCtx.globalAlpha=.85;
+      sparkCtx.fillRect(x,y-h,barW-2,h);
+      y-=h;
+    });
+  });
+}
+setInterval(sparkTick,SPARK_BUCKET_MS);
+window.addEventListener('resize',drawSpark);
+
+function renderChainHistory_init(){renderChainHistory();drawSpark();}
+renderChainHistory_init();
+
+function podStats(node){
+  const match=alerts.filter(a=>a.namespace===node.namespace&&a.pod_name===node.name);
+  const sorted=match.slice().sort((a,b)=>new Date(a.timestamp||0)-new Date(b.timestamp||0));
+  const first=sorted[0], last=sorted[sorted.length-1];
+  const techSet=new Set(sorted.map(a=>a.rule).filter(Boolean));
+  return {count:sorted.length, first, last, techs:[...techSet]};
+}
+
 function renderPodList(nodes){
   const list=document.getElementById('pod-list');
   const sorted=[...nodes].sort((a,b)=>{
@@ -542,9 +692,14 @@ function renderPodList(nodes){
   sorted.forEach(node=>{
     if(node.uid==='admin') return; // skip virtual node in list
     const color=SEV_COLORS[node.severity]||'#64748b';
+    if(node.alert_count>0) podColor(node.namespace+'/'+node.name);
     const div=document.createElement('div');
-    div.className=`pod-item sev-${node.severity}`;
-    div.onclick=()=>{selPod=node.uid;};
+    div.className=`pod-item sev-${node.severity}${expandedPod===node.uid?' expanded':''}`;
+    div.onclick=()=>{
+      selPod=node.uid;
+      expandedPod=(expandedPod===node.uid)?null:node.uid;
+      renderPodList(gNodes);
+    };
     const badgesHtml=node.alert_count>0
       ?`<div class="badge ${node.severity==='critical'?'crit':node.severity==='high'?'high':'med'}">${node.severity.toUpperCase()}</div>`
       :`<div class="badge ok">CLEAN</div>`;
@@ -558,6 +713,21 @@ function renderPodList(nodes){
       <div class="pi-badges">${badgesHtml}${node.alert_count>0?`<div class="badge info">${node.alert_count} alerts</div>`:''}</div>
     `;
     list.appendChild(div);
+    if(expandedPod===node.uid){
+      const stats=podStats(node);
+      const exp=document.createElement('div');exp.className='pod-expand';
+      if(stats.count===0){
+        exp.innerHTML=`<div class="pe-row"><span class="pe-label">Status</span><span class="pe-val">No alerts recorded for this pod</span></div>`;
+      } else {
+        exp.innerHTML=`
+          <div class="pe-row"><span class="pe-label">First Seen</span><span class="pe-val">${stats.first.rule} @ ${stats.first.timestamp?new Date(stats.first.timestamp).toTimeString().slice(0,8):'—'}</span></div>
+          <div class="pe-row"><span class="pe-label">Last Seen</span><span class="pe-val">${stats.last.rule} @ ${stats.last.timestamp?new Date(stats.last.timestamp).toTimeString().slice(0,8):'—'}</span></div>
+          <div class="pe-row"><span class="pe-label">Total Alerts</span><span class="pe-val">${stats.count}</span></div>
+          <div class="pe-row"><span class="pe-label">Techniques</span><div class="pe-techs">${stats.techs.map(t=>`<span class="pe-tech" title="${MITRE_DESC[t]||''}">${t}</span>`).join('')}</div></div>
+        `;
+      }
+      list.appendChild(exp);
+    }
   });
 }
 
@@ -578,11 +748,13 @@ function makeAlertEl(a){
   const el=document.createElement('div');
   el.className=`alert-item ${a.severity}`;
   const ts=a.timestamp?new Date(a.timestamp).toTimeString().slice(0,8):'—';
+  const podKey=(a.namespace||'')+'/'+(a.pod_name||'');
+  const dotColor=a.pod_name?podColor(podKey):'#475569';
   el.innerHTML=`
-    <div class="at"><span class="asev">${a.severity}</span><span class="arule">${a.rule}</span><span class="atime">${ts}</span></div>
+    <div class="at"><span class="asev">${a.severity}</span><span class="arule" title="${ruleTitle(a.rule)}">${a.rule}</span><span class="atime">${ts}</span></div>
     <div class="adesc">${a.description||''}</div>
     <div class="ameta">
-      <span class="atag">${a.namespace||''}/${a.pod_name||''}</span>
+      <span class="atag"><span class="pod-dot" style="background:${dotColor}"></span>${a.namespace||''}/${a.pod_name||''}</span>
       ${a.binary?`<span class="atag">${a.binary}</span>`:''}
       ${a.secret_name?`<span class="atag">secret:${a.secret_name}</span>`:''}
     </div>`;

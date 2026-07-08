@@ -486,7 +486,7 @@ function connectAlertStream(){
   es.onmessage=e=>{
     const msg=JSON.parse(e.data);if(msg.type!=='alert')return;
     const alert=msg.data;alerts.unshift(alert);prependAlert(alert);
-    if(alert.severity==='CRITICAL'&&alert.rule.includes('→')){
+    if(alert.severity==='CRITICAL'&&alert.rule.includes('->')){
       document.getElementById('chain-banner').classList.add('show');
       document.getElementById('chain-pod').textContent=`${alert.namespace}/${alert.pod_name}`;
       document.getElementById('chain-ts').textContent=new Date().toTimeString().slice(0,8);

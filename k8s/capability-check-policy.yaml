@@ -1,0 +1,25 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: cage-capability-check
+spec:
+  kprobes:
+  - call: "cap_capable"
+    syscall: false
+    return: false
+    args:
+    - index: 0
+      type: "nop"     # cred struct pointer (unused)
+    - index: 1
+      type: "nop"     # user namespace pointer (unused)
+    - index: 2
+      type: "int"     # requested capability, e.g. CAP_SYS_ADMIN
+    selectors:
+    - matchArgs:
+      - index: 2
+        operator: "Equal"
+        values:
+        - "21"   # CAP_SYS_ADMIN
+        - "19"   # CAP_SYS_PTRACE
+        - "16"   # CAP_SYS_MODULE
+        - "22"   # CAP_SYS_BOOT

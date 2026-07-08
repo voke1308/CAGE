@@ -1,10 +1,16 @@
 apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
+  # Full request/response bodies needed to inspect pod securityContext,
+  # RBAC roleRef/subjects, and Role/ClusterRole rules.
   - level: RequestResponse
     resources:
       - group: ""
         resources: ["pods", "secrets", "serviceaccounts"]
+      - group: "rbac.authorization.k8s.io"
+        resources: ["clusterrolebindings", "rolebindings", "clusterroles", "roles"]
+  - level: Metadata
+    verbs: ["impersonate"]
   - level: Metadata
     omitStages:
       - "RequestReceived"

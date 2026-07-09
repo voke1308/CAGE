@@ -158,7 +158,7 @@ def get_graph():
         
         elif rule == 'T1059' and uid:
             # Self-loop: shell spawn inside the pod — draw as tetragon -> pod
-            tetragon_uid = next((u for u, m in pods.items() if m.get('name','').startswith('tetragon-x')), None)
+            tetragon_uid = next((u for u, m in pods.items() if m.get('name','').startswith('tetragon-') and not m.get('name','').startswith('tetragon-operator')), None)
             if tetragon_uid:
                 key = (tetragon_uid, uid, 'T1059')
                 if key not in seen_edges:

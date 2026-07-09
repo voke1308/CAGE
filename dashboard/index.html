@@ -122,6 +122,10 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
 .pe-val{color:var(--text);text-align:right;max-width:60%}
 .pe-techs{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end}
 .pe-tech{background:rgba(255,255,255,.05);border:1px solid var(--border2);padding:1px 4px;border-radius:2px;font-size:8px;color:var(--text2)}
+.sort-toggle{display:flex;gap:2px;background:rgba(255,255,255,.03);border-radius:4px;padding:2px}
+.sort-btn{font-size:9px;padding:2px 7px;border-radius:3px;cursor:pointer;color:var(--text3);transition:all .12s;text-transform:none;letter-spacing:0}
+.sort-btn:hover{color:var(--text2)}
+.sort-btn.active{background:var(--bg3);color:var(--text);font-weight:600}
 </style>
 </head>
 <body>
@@ -198,6 +202,13 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     <div class="ph">Chain History <span id="chain-count">0 chains</span></div>
     <div class="chain-hist" id="chain-hist"><div class="chain-hist-empty">No attack chains detected yet</div></div>
     <div class="ph">Alert Feed <span id="alert-count">0 alerts</span></div>
+    <div class="ph" style="padding:6px 12px;border-top:0">
+      <span></span>
+      <span class="sort-toggle">
+        <span class="sort-btn active" id="sort-time-btn" onclick="setAlertSort('time')">Recent</span>
+        <span class="sort-btn" id="sort-sev-btn" onclick="setAlertSort('severity')">Severity</span>
+      </span>
+    </div>
     <div class="alert-list" id="alert-list"></div>
     <div class="ph">Live Event Stream <span id="evt-count">0 events</span></div>
     <div class="evt-stream" id="evt-stream"></div>
@@ -532,7 +543,7 @@ async function fetchAll(){
     updateMetrics(stats);
     renderPodList(graph.nodes);
     initGraph(graph.nodes,graph.edges);
-    renderAlerts(alerts.slice().reverse());
+    renderAlerts(sortedAlertsView());
     chainHistory=alerts.filter(a=>a.severity==='CRITICAL'&&a.rule&&a.rule.includes('->'))
       .slice().reverse().slice(0,25)
       .map(a=>({rule:a.rule,pod:`${a.namespace}/${a.pod_name}`,
@@ -731,6 +742,23 @@ function renderPodList(nodes){
   });
 }
 
+let alertSortMode='time';
+const SEV_RANK={CRITICAL:0,HIGH:1,MEDIUM:2};
+function sortedAlertsView(){
+  if(alertSortMode==='time') return alerts.slice().reverse();
+  return alerts.slice().sort((a,b)=>{
+    const r=(SEV_RANK[a.severity]??3)-(SEV_RANK[b.severity]??3);
+    if(r!==0) return r;
+    return new Date(b.timestamp||0)-new Date(a.timestamp||0);
+  });
+}
+function setAlertSort(mode){
+  alertSortMode=mode;
+  document.getElementById('sort-time-btn').classList.toggle('active',mode==='time');
+  document.getElementById('sort-sev-btn').classList.toggle('active',mode==='severity');
+  renderAlerts(sortedAlertsView());
+}
+
 function renderAlerts(list){
   const feed=document.getElementById('alert-list');
   feed.innerHTML='';
@@ -739,6 +767,10 @@ function renderAlerts(list){
 }
 
 function prependAlert(a){
+  if(alertSortMode==='severity'){
+    renderAlerts(sortedAlertsView());
+    return;
+  }
   const feed=document.getElementById('alert-list');
   feed.insertBefore(makeAlertEl(a),feed.firstChild);
   document.getElementById('alert-count').textContent=alerts.length+' alerts';

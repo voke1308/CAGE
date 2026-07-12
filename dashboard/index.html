@@ -60,6 +60,11 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
 .badge.ok{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
 .badge.info{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
 .center{display:flex;flex-direction:column;overflow:hidden;position:relative}
+.graph-scroll{position:absolute;inset:0;overflow:auto}
+.graph-scroll::-webkit-scrollbar{width:10px;height:10px}
+.graph-scroll::-webkit-scrollbar-track{background:var(--bg2)}
+.graph-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
+.graph-scroll::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 #graph-canvas{width:100%;flex:1;display:block}
 .graph-controls{position:absolute;bottom:12px;left:12px;display:flex;gap:6px}
 .gbtn{background:var(--bg2);border:1px solid var(--border2);color:var(--text2);padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit}
@@ -174,17 +179,19 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     <div id="pod-list"></div>
   </div>
   <div class="center">
-    <canvas id="graph-canvas"></canvas>
+    <div class="graph-scroll" id="graph-scroll">
+      <canvas id="graph-canvas"></canvas>
+    </div>
     <div class="legend">
       <div class="li"><div class="li-dot" style="background:#ef4444"></div>Critical pod</div>
       <div class="li"><div class="li-dot" style="background:#f59e0b"></div>Alert pod</div>
       <div class="li"><div class="li-dot" style="background:#22c55e"></div>Clean pod</div>
       <div class="li"><div class="li-dot" style="background:#64748b"></div>System/External</div>
       <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
-        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
-        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
-        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
-        <div class="li" title="Pod-to-pod network edges drawn on the graph"><div class="li-line" style="background:#06b6d4"></div>T1610 network</div>
+        <div class="li" title="Tetragon eBPF sensor observing a shell spawn inside the pod"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
+        <div class="li" title="External admin runs kubectl exec into the pod"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
+        <div class="li" title="Pod calls the K8s API to read a secret"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
+        <div class="li" title="Pod opens a TCP connection to another pod"><div class="li-line" style="background:#06b6d4"></div>T1610 network</div>
       </div>
       <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
         <div class="li" title="Attacker breaks out of container isolation to reach the host"><div class="li-dot" style="background:#ef4444"></div>T1611 escape</div>
@@ -196,6 +203,9 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     <div class="graph-controls">
       <button class="gbtn" onclick="resetLayout()">↺ Reset</button>
       <button class="gbtn" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+      <button class="gbtn" onclick="zoomBy(-0.2)">−</button>
+      <button class="gbtn" id="zoom-label" onclick="resetZoom()">100%</button>
+      <button class="gbtn" onclick="zoomBy(0.2)">+</button>
     </div>
   </div>
   <div class="right">
@@ -263,6 +273,7 @@ const FIXED_LAYOUT = {
   'attacker':     {xp:0.42, yp:0.50, role:'attacker'},
   'kube-api':     {xp:0.75, yp:0.50, role:'target'},
   'tetragon':     {xp:0.42, yp:0.18, role:'sensor'},
+  'host':         {xp:0.42, yp:0.84, role:'target'},
   // Push all system/noise pods to bottom-right quadrant cluster
   'coredns-1':    {xp:0.82, yp:0.72, role:'system'},
   'coredns-2':    {xp:0.90, yp:0.80, role:'system'},
@@ -282,15 +293,50 @@ const FIXED_LAYOUT = {
 const canvas = document.getElementById('graph-canvas');
 const ctx = canvas.getContext('2d');
 
-function resize(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;}
+const MIN_GRAPH_W=1500, MIN_GRAPH_H=900;
+function resize(){
+  const wrap=document.getElementById('graph-scroll');
+  const w=Math.max(wrap.clientWidth, MIN_GRAPH_W);
+  const h=Math.max(wrap.clientHeight, MIN_GRAPH_H);
+  canvas.width=w; canvas.height=h;
+  canvas.style.width=w+'px'; canvas.style.height=h+'px';
+}
 window.addEventListener('resize',()=>{resize();applyFixedLayout();});
 resize();
 
+// ── Graph-only zoom (CSS transform on the canvas; rest of the UI is unaffected) ──
+let graphZoom=1;
+const ZOOM_MIN=0.4, ZOOM_MAX=2.5;
+function applyZoom(){
+  canvas.style.transformOrigin='0 0';
+  canvas.style.transform=`scale(${graphZoom})`;
+  document.getElementById('zoom-label').textContent=Math.round(graphZoom*100)+'%';
+}
+function zoomBy(delta){ setZoom(graphZoom+delta); }
+function resetZoom(){ setZoom(1); }
+function setZoom(z){
+  graphZoom=Math.min(ZOOM_MAX,Math.max(ZOOM_MIN,z));
+  applyZoom();
+}
+document.getElementById('graph-scroll').addEventListener('wheel',e=>{
+  e.preventDefault();
+  const wrap=document.getElementById('graph-scroll');
+  // keep the point under the cursor stable while zooming
+  const r=wrap.getBoundingClientRect();
+  const beforeX=(e.clientX-r.left+wrap.scrollLeft)/graphZoom;
+  const beforeY=(e.clientY-r.top+wrap.scrollTop)/graphZoom;
+  setZoom(graphZoom + (e.deltaY<0?0.1:-0.1));
+  wrap.scrollLeft=beforeX*graphZoom-(e.clientX-r.left);
+  wrap.scrollTop=beforeY*graphZoom-(e.clientY-r.top);
+},{passive:false});
+applyZoom();
+
 function getFixedKey(node){
   if(node.uid==='admin') return 'admin';
+  if(node.uid==='host') return 'host';
   if(node.name==='attacker') return 'attacker';
   if(node.name&&node.name.startsWith('kube-apiserver-')) return 'kube-api';
-  if(node.name&&node.name.startsWith('tetragon-x')) return 'tetragon';
+  if(node.name&&node.name.startsWith('tetragon-')&&!node.name.startsWith('tetragon-operator')) return 'tetragon';
   if(node.name&&node.name.startsWith('coredns-')&&node.name.endsWith('rdz7p')) return 'coredns-1';
   if(node.name&&node.name.startsWith('coredns-')&&node.name.endsWith('z2qn7')) return 'coredns-2';
   if(node.name&&node.name.startsWith('etcd-')) return 'etcd';
@@ -348,6 +394,8 @@ function animLoop(ts){
 
 function nodeRadius(n){
   if(n.uid==='admin') return 18;
+  if(n.uid==='host') return 20;
+  if(n.uid&&n.uid.startsWith('rbac:')) return 16;
   if(n.name==='attacker') return 26;
   if(n.name&&n.name.startsWith('kube-apiserver')) return 22;
   if(n.name&&n.name.startsWith('tetragon')) return 18;
@@ -360,6 +408,8 @@ function nodeColor(n){
   if(n.severity==='high') return '#f59e0b';
   if(n.severity==='medium') return '#eab308';
   if(n.uid==='admin') return '#a855f7';
+  if(n.uid==='host') return '#ef4444';
+  if(n.uid&&n.uid.startsWith('rbac:')) return '#ec4899';
   if(n.name&&n.name.startsWith('tetragon')) return '#14b8a6';
   if(n.namespace!=='default') return '#475569';
   return '#22c55e';
@@ -370,6 +420,41 @@ function drawEdge(e,t){
   if(!fp||!tp) return;
   const fn=gNodes.find(n=>n.uid===e.from), tn=gNodes.find(n=>n.uid===e.to);
   if(!fn||!tn) return;
+
+  if(e.from===e.to){
+    // Self-loop: curved arc above the node, for T1548 priv-esc / T1496 / T1499
+    const r=nodeRadius(fn);
+    const cx=fp.x, cy=fp.y-r-22;
+    ctx.save();
+    ctx.shadowColor=e.color||'#3b82f6'; ctx.shadowBlur=6;
+    ctx.strokeStyle=e.color||'#3b82f6'; ctx.lineWidth=2.5; ctx.globalAlpha=.85;
+    ctx.setLineDash([8,4]); ctx.lineDashOffset=-(t*0.04);
+    ctx.beginPath();
+    ctx.arc(cx,cy,20,0.15*Math.PI,0.85*Math.PI,false);
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.shadowBlur=0;
+    // Arrowhead pointing back down into the node
+    const ax=fp.x-r*0.3, ay=fp.y-r-2;
+    ctx.globalAlpha=1; ctx.fillStyle=e.color||'#3b82f6';
+    ctx.beginPath();
+    ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-8,ay-10);
+    ctx.lineTo(ax+8,ay-10);
+    ctx.closePath(); ctx.fill();
+    // Label
+    const label=e.type||'';
+    ctx.font='bold 10px SF Mono,monospace'; ctx.textAlign='center';
+    const tw=ctx.measureText(label).width;
+    ctx.globalAlpha=.9; ctx.fillStyle='rgba(10,14,26,.85)';
+    ctx.fillRect(cx-tw/2-5,cy-30,tw+10,16);
+    ctx.strokeStyle=e.color||'#3b82f6'; ctx.lineWidth=1;
+    ctx.strokeRect(cx-tw/2-5,cy-30,tw+10,16);
+    ctx.fillStyle=e.color||'#3b82f6'; ctx.globalAlpha=1;
+    ctx.fillText(label,cx,cy-18);
+    ctx.restore();
+    return;
+  }
+
   const dx=tp.x-fp.x,dy=tp.y-fp.y,dist=Math.sqrt(dx*dx+dy*dy);
   if(dist<1) return;
   const ux=dx/dist,uy=dy/dist;
@@ -526,7 +611,7 @@ canvas.addEventListener('click',e=>{
     if(Math.sqrt(dx*dx+dy*dy)<nodeRadius(n)+6) selPod=n.uid;
   });
 });
-function cm(e){const r=canvas.getBoundingClientRect();return{mx:e.clientX-r.left,my:e.clientY-r.top};}
+function cm(e){const r=canvas.getBoundingClientRect();return{mx:(e.clientX-r.left)*(canvas.width/r.width),my:(e.clientY-r.top)*(canvas.height/r.height)};}
 function resetLayout(){nodePositions={};applyFixedLayout();}
 function togglePause(){animPaused=!animPaused;document.getElementById('pause-btn').textContent=animPaused?'▶ Resume':'⏸ Pause';}
 

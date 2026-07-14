@@ -1,5 +1,6 @@
 import json
 import time
+import re
 import threading
 import queue
 from datetime import datetime
@@ -132,10 +133,26 @@ def get_graph():
     
     api_uid = next((u for u, m in pods.items() if m.get('name','').startswith('kube-apiserver')), None)
     attacker_uid = next((u for u, m in pods.items() if m.get('name') == 'attacker'), None)
+    rbac_targets = set()
     
     for alert in alerts:
         uid = alert.get('pod_uid')
         rule = alert.get('rule', '')
+
+        if rule == 'T1548.005':
+            # Cluster-level RBAC abuse — no pod_uid, so this must be handled
+            # before the "if not uid: continue" guard below.
+            reason = alert.get('description', '') or ''
+            m = re.search(r'ServiceAccount:(\S+)', reason)
+            target_name = m.group(1) if m else 'elevated-role'
+            target_key = f'rbac:{target_name}'
+            key = ('admin', target_key, 'T1548.005')
+            if key not in seen_edges:
+                seen_edges.add(key)
+                rbac_targets.add((target_key, target_name))
+                edges.append({'from': 'admin', 'to': target_key, 'type': 'T1548.005', 'color': '#ec4899', 'label': 'grants cluster-admin'})
+            continue
+
         if not uid:
             continue
         
@@ -158,7 +175,9 @@ def get_graph():
         
         elif rule == 'T1059' and uid:
             # Self-loop: shell spawn inside the pod — draw as tetragon -> pod
-            tetragon_uid = next((u for u, m in pods.items() if m.get('name','').startswith('tetragon-') and not m.get('name','').startswith('tetragon-operator')), None)
+            tetragon_uid = next((u for u, m in pods.items()
+                                  if m.get('name','').startswith('tetragon-')
+                                  and not m.get('name','').startswith('tetragon-operator')), None)
             if tetragon_uid:
                 key = (tetragon_uid, uid, 'T1059')
                 if key not in seen_edges:
@@ -174,6 +193,28 @@ def get_graph():
                     seen_edges.add(key)
                     edges.append({'from': uid, 'to': dst_uid, 'type': 'T1610', 'color': '#06b6d4', 'label': 'net connect'})
 
+        elif rule in ('T1548', 'T1548-PRIV-POD') and uid:
+            # Self-loop: privilege escalation inside the pod
+            key = (uid, uid, 'T1548')
+            if key not in seen_edges:
+                seen_edges.add(key)
+                edges.append({'from': uid, 'to': uid, 'type': 'T1548', 'color': '#f97316', 'label': 'priv-esc'})
+
+        elif rule == 'T1611' and uid:
+            # pod -> virtual host-system node (container breakout)
+            key = (uid, 'host', 'T1611')
+            if key not in seen_edges:
+                seen_edges.add(key)
+                edges.append({'from': uid, 'to': 'host', 'type': 'T1611', 'color': '#ef4444', 'label': 'container escape'})
+
+        elif rule in ('T1496', 'T1499') and uid:
+            # Self-loop: resource abuse inside the pod
+            key = (uid, uid, rule)
+            if key not in seen_edges:
+                seen_edges.add(key)
+                label = 'cryptomining' if rule == 'T1496' else 'fork bomb'
+                edges.append({'from': uid, 'to': uid, 'type': rule, 'color': '#eab308', 'label': label})
+
     # Add virtual admin node to nodes list
     admin_node = {
         'uid': 'admin',
@@ -185,9 +226,32 @@ def get_graph():
         'alert_count': 0,
         'virtual': True,
     }
+    host_node = {
+        'uid': 'host',
+        'name': 'Host System',
+        'namespace': 'host',
+        'ip': '',
+        'node': '',
+        'severity': 'critical',
+        'alert_count': 0,
+        'virtual': True,
+    }
     node_list = list(nodes.values())
-    if any(e.get('from') == 'admin' for e in edges):
+    if any(e.get('from') == 'admin' or e.get('to') == 'admin' for e in edges):
         node_list.append(admin_node)
+    if any(e.get('to') == 'host' for e in edges):
+        node_list.append(host_node)
+    for target_key, target_name in rbac_targets:
+        node_list.append({
+            'uid': target_key,
+            'name': target_name,
+            'namespace': 'rbac',
+            'ip': '',
+            'node': '',
+            'severity': 'critical',
+            'alert_count': 0,
+            'virtual': True,
+        })
 
     return jsonify({'nodes': node_list, 'edges': edges})
 

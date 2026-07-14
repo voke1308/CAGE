@@ -130,7 +130,40 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
 .sort-toggle{display:flex;gap:2px;background:rgba(255,255,255,.03);border-radius:4px;padding:2px}
 .sort-btn{font-size:9px;padding:2px 7px;border-radius:3px;cursor:pointer;color:var(--text3);transition:all .12s;text-transform:none;letter-spacing:0}
 .sort-btn:hover{color:var(--text2)}
-.sort-btn.active{background:var(--bg3);color:var(--text);font-weight:600}
+.navbar{display:flex;gap:2px;padding:0 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.navtab{padding:10px 16px;font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.navtab:hover{color:var(--text2)}
+.navtab.active{color:var(--text);border-bottom-color:#6366f1}
+.page{display:flex;flex-direction:column;flex:1;min-height:0}
+
+.killchain-wrap{padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.kc-hd{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.kc-hd select{background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:4px;font-size:10px;padding:2px 6px}
+.kc-steps{display:flex;align-items:center}
+.kc-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;position:relative}
+.kc-node{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);transition:all .2s;z-index:1}
+.kc-step.hit .kc-node{border-color:#ef4444;background:#ef444422;color:#ef4444;box-shadow:0 0 12px #ef444455}
+.kc-label{font-size:9px;color:var(--text3);text-align:center;max-width:80px}
+.kc-step.hit .kc-label{color:var(--text2)}
+.kc-line{position:absolute;top:14px;left:50%;width:100%;height:2px;background:var(--border2);z-index:0}
+.kc-step.hit .kc-line{background:#ef4444}
+.kc-step:last-child .kc-line{display:none}
+.kc-count{font-size:8px;color:#ef4444;font-weight:700;margin-top:-2px}
+
+.matrix-wrap{flex:1;overflow:auto;padding:20px}
+.matrix-intro{font-size:11px;color:var(--text2);margin-bottom:16px;max-width:800px;line-height:1.6}
+.matrix-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;max-width:1400px}
+.matrix-col-hd{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:6px 4px;border-bottom:1px solid var(--border2);margin-bottom:4px}
+.matrix-cell{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:10px;min-height:70px;display:flex;flex-direction:column;justify-content:space-between;transition:all .2s}
+.matrix-cell.hit{border-color:#ef4444;background:linear-gradient(135deg,#ef444418,#ef444405)}
+.matrix-cell.hit-med{border-color:#eab308;background:linear-gradient(135deg,#eab30818,#eab30805)}
+.matrix-cell-id{font-size:10px;font-weight:700;font-family:'SF Mono',monospace;color:var(--text2)}
+.matrix-cell.hit .matrix-cell-id{color:#ef4444}
+.matrix-cell.hit-med .matrix-cell-id{color:#eab308}
+.matrix-cell-name{font-size:9px;color:var(--text3);margin-top:2px;line-height:1.3}
+.matrix-cell-count{font-size:16px;font-weight:700;color:var(--text3);align-self:flex-end}
+.matrix-cell.hit .matrix-cell-count{color:#ef4444}
+.matrix-cell.hit-med .matrix-cell-count{color:#eab308}
 </style>
 </head>
 <body>
@@ -149,6 +182,11 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     <span id="clock"></span>
   </div>
 </div>
+<div class="navbar">
+  <div class="navtab active" id="navtab-live" onclick="switchPage('live')">Live View</div>
+  <div class="navtab" id="navtab-matrix" onclick="switchPage('matrix')">MITRE Matrix</div>
+</div>
+<div id="page-live" class="page">
 <div id="chain-banner">
   <span style="font-weight:700;flex-shrink:0">⚠ CHAIN DETECTED</span>
   <div style="display:flex;align-items:center;gap:6px">
@@ -160,6 +198,13 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
   </div>
   <span id="chain-pod"></span>
   <span id="chain-ts"></span>
+</div>
+<div class="killchain-wrap">
+  <div class="kc-hd">
+    <span>Kill-Chain Progress</span>
+    <select id="kc-pod-select" onchange="renderKillChain(this.value)"></select>
+  </div>
+  <div class="kc-steps" id="kc-steps"></div>
 </div>
 <div class="metrics">
   <div class="metric"><div class="mv crit" id="m-crit">0</div><div><div class="ml">Critical</div><div class="md">chains</div></div></div>
@@ -191,7 +236,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
         <div class="li" title="Tetragon eBPF sensor observing a shell spawn inside the pod"><div class="li-line" style="background:#eab308"></div>T1059 shell</div>
         <div class="li" title="External admin runs kubectl exec into the pod"><div class="li-line" style="background:#a855f7"></div>T1021 exec</div>
         <div class="li" title="Pod calls the K8s API to read a secret"><div class="li-line" style="background:#ef4444"></div>T1552 secret</div>
-        <div class="li" title="Pod opens a TCP connection to another pod"><div class="li-line" style="background:#06b6d4"></div>T1610 network</div>
+        <div class="li" title="Pod opens a TCP connection to another pod"><div class="li-line" style="background:#06b6d4"></div>Network Flow</div>
       </div>
       <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)">
         <div class="li" title="Attacker breaks out of container isolation to reach the host"><div class="li-dot" style="background:#ef4444"></div>T1611 escape</div>
@@ -224,6 +269,17 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',mo
     <div class="evt-stream" id="evt-stream"></div>
   </div>
 </div>
+</div>
+<div id="page-matrix" class="page" style="display:none">
+  <div class="matrix-wrap">
+    <div class="matrix-intro">
+      The MITRE ATT&CK matrix below shows every technique CAGE can detect, grouped by tactic. Cells light up
+      when that technique has fired at least once, with a running count of how many times. Use this view to
+      see coverage breadth at a glance, independent of which pod triggered it.
+    </div>
+    <div class="matrix-grid" id="matrix-grid"></div>
+  </div>
+</div>
 <div id="tt">
   <div class="tt-title" id="tt-name"></div>
   <div class="tt-row"><span>ns: </span><span id="tt-ns"></span></div>
@@ -250,7 +306,7 @@ const MITRE_DESC={
   'T1059':'Execution: a shell process spawned inside a container',
   'T1021':'Remote exec: someone ran kubectl exec into this pod',
   'T1552':'Credential Access: a Kubernetes secret was read via the API',
-  'T1610':'Lateral Movement: this pod opened a TCP connection to another pod',
+  'T1610':'Network Flow: this pod opened a TCP connection to another pod',
   'T1611':'Escape to Host: container-escape tooling or host-runtime paths were used inside the container',
   'T1548':'Privilege Escalation: sudo/su/setcap used inside the container',
   'T1548-PRIV-POD':'Privilege Escalation: a pod was deployed with privileged/host-namespace settings',
@@ -376,6 +432,7 @@ function initGraph(nodes,edges){
 function updateGraphData(nodes,edges){
   gNodes=nodes; gEdges=edges;
   applyFixedLayout();
+  populateKcPodSelect();
 }
 
 let packetT=0;
@@ -628,6 +685,7 @@ async function fetchAll(){
     updateMetrics(stats);
     renderPodList(graph.nodes);
     initGraph(graph.nodes,graph.edges);
+    populateKcPodSelect();
     renderAlerts(sortedAlertsView());
     chainHistory=alerts.filter(a=>a.severity==='CRITICAL'&&a.rule&&a.rule.includes('->'))
       .slice().reverse().slice(0,25)
@@ -662,6 +720,8 @@ function connectAlertStream(){
     }
     sparkAdd(alert.severity);
     fetchStats();fetchGraph();
+    if(currentPage==='matrix') renderMitreMatrix();
+    renderKillChain(document.getElementById('kc-pod-select').value||'attacker');
     document.getElementById('conn-status').textContent='LIVE';
     document.getElementById('conn-status').className='live';
   };
@@ -776,6 +836,94 @@ function podStats(node){
   const first=sorted[0], last=sorted[sorted.length-1];
   const techSet=new Set(sorted.map(a=>a.rule).filter(Boolean));
   return {count:sorted.length, first, last, techs:[...techSet]};
+}
+
+// ── Multi-page navigation ──
+let currentPage='live';
+function switchPage(name){
+  currentPage=name;
+  document.getElementById('page-live').style.display=name==='live'?'flex':'none';
+  document.getElementById('page-matrix').style.display=name==='matrix'?'flex':'none';
+  document.getElementById('navtab-live').classList.toggle('active',name==='live');
+  document.getElementById('navtab-matrix').classList.toggle('active',name==='matrix');
+  if(name==='matrix') renderMitreMatrix();
+}
+
+// ── Kill-chain stepper ──
+const KC_STAGES=[
+  {label:'Initial Access', rules:['T1021']},
+  {label:'Execution',      rules:['T1059']},
+  {label:'Priv. Escalation', rules:['T1548','T1548-PRIV-POD','T1611']},
+  {label:'Lateral Movement', rules:['T1610']},
+  {label:'Credential Access', rules:['T1552']},
+  {label:'Impact',         rules:['T1496','T1499']},
+  {label:'RBAC Abuse',     rules:['T1548.005']},
+];
+function populateKcPodSelect(){
+  const sel=document.getElementById('kc-pod-select');
+  const prev=sel.value;
+  const withAlerts=gNodes.filter(n=>n.alert_count>0 && n.uid!=='admin' && n.uid!=='host' && !(n.uid||'').startsWith('rbac:'));
+  const options=withAlerts.length?withAlerts:gNodes.filter(n=>n.name==='attacker');
+  sel.innerHTML=options.map(n=>`<option value="${n.name}">${n.namespace}/${n.name}</option>`).join('');
+  if(prev && options.some(n=>n.name===prev)) sel.value=prev;
+  renderKillChain(sel.value||(options[0]&&options[0].name)||'attacker');
+}
+function renderKillChain(podName){
+  if(!podName) return;
+  const node=gNodes.find(n=>n.name===podName);
+  const match=node?alerts.filter(a=>a.namespace===node.namespace&&a.pod_name===node.name):[];
+  const rulesSeen=match.map(a=>a.rule).filter(Boolean);
+  const el=document.getElementById('kc-steps');
+  el.innerHTML=KC_STAGES.map(stage=>{
+    const hitCount=rulesSeen.filter(r=>stage.rules.includes(r)).length;
+    const hit=hitCount>0;
+    return `<div class="kc-step ${hit?'hit':''}">
+      <div class="kc-line"></div>
+      <div class="kc-node">${hit?'✓':'—'}</div>
+      ${hit?`<div class="kc-count">${hitCount}</div>`:''}
+      <div class="kc-label">${stage.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── MITRE Matrix page ──
+const MATRIX_TECHNIQUES=[
+  {id:'T1021', name:'Remote Services (kubectl exec)', tactic:'Lateral Movement'},
+  {id:'T1059', name:'Shell spawned in container', tactic:'Execution'},
+  {id:'T1611', name:'Escape to Host', tactic:'Priv. Escalation'},
+  {id:'T1548', name:'Abuse Elevation (sudo/setcap)', tactic:'Priv. Escalation'},
+  {id:'T1548.005', name:'RBAC cluster-admin grant', tactic:'Priv. Escalation'},
+  {id:'T1552', name:'Secret read via K8s API', tactic:'Credential Access'},
+  {id:'T1610', name:'Network Flow', tactic:'Lateral Movement'},
+  {id:'T1613', name:'RBAC discovery burst', tactic:'Discovery'},
+  {id:'T1496', name:'Cryptomining signature', tactic:'Impact'},
+  {id:'T1499', name:'Fork-bomb / resource abuse', tactic:'Impact'},
+];
+const MATRIX_TACTICS=['Lateral Movement','Execution','Priv. Escalation','Credential Access','Discovery','Impact'];
+function renderMitreMatrix(){
+  const grid=document.getElementById('matrix-grid');
+  const counts={};
+  alerts.forEach(a=>{ if(a.rule) counts[a.rule]=(counts[a.rule]||0)+1; });
+  grid.innerHTML='';
+  MATRIX_TACTICS.forEach(t=>{
+    const hd=document.createElement('div');
+    hd.className='matrix-col-hd'; hd.textContent=t;
+    grid.appendChild(hd);
+  });
+  MATRIX_TACTICS.forEach(tactic=>{
+    const techs=MATRIX_TECHNIQUES.filter(x=>x.tactic===tactic);
+    const maxRows=Math.max(...MATRIX_TACTICS.map(tc=>MATRIX_TECHNIQUES.filter(x=>x.tactic===tc).length));
+    for(let i=0;i<maxRows;i++){
+      const tech=techs[i];
+      const cell=document.createElement('div');
+      if(!tech){ cell.style.visibility='hidden'; grid.appendChild(cell); continue; }
+      const count=counts[tech.id]||0;
+      cell.className='matrix-cell'+(count>0?(count>=3?' hit':' hit-med'):'');
+      cell.title=MITRE_DESC[tech.id]||'';
+      cell.innerHTML=`<div><div class="matrix-cell-id">${tech.id}</div><div class="matrix-cell-name">${tech.name}</div></div><div class="matrix-cell-count">${count}</div>`;
+      grid.appendChild(cell);
+    }
+  });
 }
 
 function renderPodList(nodes){

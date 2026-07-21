@@ -1,0 +1,189 @@
+nohup: ignoring input
+Starting CAGE correlator... [ABLATION_MODE=audit_only]
+2026-07-20 11:04:11,619 INFO Pod UID cache watcher started
+2026-07-20 11:04:11,650 INFO [ADD] default/attacker uid=420b9f4d-0567-4264-8154-3081a4470cd3 ip=10.244.2.2 sa=default
+2026-07-20 11:04:11,652 INFO [ADD] default/benign-worker uid=64ae70c1-1079-4a97-b1df-5c09480a8348 ip=10.244.1.13 sa=default
+2026-07-20 11:04:11,653 INFO [ADD] default/legitimate-app uid=abdd635b-4050-4cad-ac9a-697ec574fadb ip=10.244.2.3 sa=default
+2026-07-20 11:04:11,655 INFO [ADD] default/t1548-privesc-6-5144 uid=c3b48a0e-6e59-4292-844e-2e96e9f8bf99 ip=10.244.1.7 sa=default
+2026-07-20 11:04:11,658 INFO [ADD] kube-system/coredns-7db6d8ff4d-577n9 uid=ba10798f-b6d9-46bb-88b3-86a59c301f1c ip=10.244.0.2 sa=coredns
+2026-07-20 11:04:11,659 INFO [ADD] kube-system/coredns-7db6d8ff4d-kdh57 uid=3a0ccce7-4540-4230-a12e-54795bfda4fd ip=10.244.0.3 sa=coredns
+2026-07-20 11:04:11,661 INFO [ADD] kube-system/etcd-cage-control-plane uid=f57e082a-48bc-4d5b-bb36-08fb2daded8a ip=172.18.0.3 sa=None
+2026-07-20 11:04:11,662 INFO [ADD] kube-system/kindnet-f7m2k uid=9640e264-719c-4352-84e8-34117db0581f ip=172.18.0.2 sa=kindnet
+2026-07-20 11:04:11,664 INFO [ADD] kube-system/kindnet-fz6tn uid=5dee23d5-7478-4542-8380-03f2511eb741 ip=172.18.0.3 sa=kindnet
+2026-07-20 11:04:11,665 INFO [ADD] kube-system/kindnet-gk8m6 uid=a60dc6b9-c812-47c1-89e5-856fe8b3118f ip=172.18.0.4 sa=kindnet
+2026-07-20 11:04:11,667 INFO [ADD] kube-system/kube-apiserver-cage-control-plane uid=87a53709-550a-47c8-ac0f-29431d1727b8 ip=172.18.0.3 sa=None
+2026-07-20 11:04:11,669 INFO [ADD] kube-system/kube-controller-manager-cage-control-plane uid=f45000e7-a01a-4f1a-af36-037c199be102 ip=172.18.0.3 sa=None
+2026-07-20 11:04:11,670 INFO [ADD] kube-system/kube-proxy-dz7kj uid=7677e853-56af-449c-b86d-160cdc6c9394 ip=172.18.0.3 sa=kube-proxy
+2026-07-20 11:04:11,672 INFO [ADD] kube-system/kube-proxy-lmpwz uid=3b42a1f6-a5d9-45f0-b24e-a8ad58b33a92 ip=172.18.0.4 sa=kube-proxy
+2026-07-20 11:04:11,675 INFO [ADD] kube-system/kube-proxy-n67dd uid=31afca50-73ea-4427-bffb-0f56865b3516 ip=172.18.0.2 sa=kube-proxy
+2026-07-20 11:04:11,676 INFO [ADD] kube-system/kube-scheduler-cage-control-plane uid=fae6088f-7ef0-4c67-b495-3a757d0f8a25 ip=172.18.0.3 sa=None
+2026-07-20 11:04:11,679 INFO [ADD] kube-system/tetragon-4w7jp uid=8566f268-2c4d-42c5-8210-136428df63a7 ip=172.18.0.2 sa=tetragon
+2026-07-20 11:04:11,682 INFO [ADD] kube-system/tetragon-dmjzf uid=424ed291-4dc1-438e-9b81-de88214b894b ip=172.18.0.4 sa=tetragon
+2026-07-20 11:04:11,683 INFO [ADD] kube-system/tetragon-operator-d59bd58b8-q2xf4 uid=42fb4c5e-1c23-427f-9e8e-e0f96446441f ip=10.244.1.2 sa=tetragon-operator-service-account
+2026-07-20 11:04:11,685 INFO [ADD] kube-system/tetragon-xzdqs uid=e58baf49-288b-4167-8d81-561e9dc572ad ip=172.18.0.3 sa=tetragon
+2026-07-20 11:04:11,687 INFO [ADD] local-path-storage/local-path-provisioner-988d74bc-k4rr5 uid=f86a41d4-4708-479d-b3ff-9f464313bc59 ip=10.244.0.4 sa=local-path-provisioner-service-account
+  [OFF] TetragonConsumer
+2026-07-20 11:04:13,621 INFO Audit log consumer started
+  [ON]  AuditLogConsumer
+  [OFF] NetworkMonitor
+CAGE server running at http://localhost:5000
+ * Serving Flask app 'server'
+ * Debug mode: off
+2026-07-20 11:04:13,627 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.191.124:5000
+2026-07-20 11:04:13,627 INFO [33mPress CTRL+C to quit[0m
+2026-07-20 11:05:33,010 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:05:33,011 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:06:22,416 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:06:22,417 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:06:40,886 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:06:40,886 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:06:59,565 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:06:59,566 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:07:17,986 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:07:17,987 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:07:36,623 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:07:36,623 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:07:55,095 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:07:55,095 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:08:13,643 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:08:13,644 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:08:32,177 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:08:32,177 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:08:50,642 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:08:50,642 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:09,175 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:09,175 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:27,562 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:27,562 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:30,983 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:30,983 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:34,526 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:34,527 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:37,845 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:37,846 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:41,268 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:41,269 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:44,557 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:44,558 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:47,874 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:47,874 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:51,246 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:51,247 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:54,621 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:54,621 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:09:57,910 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:09:57,910 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:01,424 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:01,425 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:01,432 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:01,432 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:04,847 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:04,848 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:04,854 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:04,854 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:08,317 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:08,318 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:08,323 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:08,323 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:11,627 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:11,627 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:11,636 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:11,637 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:15,025 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:15,025 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:15,034 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:15,034 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:18,395 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:18,396 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:18,402 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:18,402 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:21,697 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:21,697 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:21,703 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:21,703 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:25,113 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:25,114 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:25,121 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:25,121 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:28,476 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:28,476 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:28,483 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:28,483 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:32,001 INFO [AUDIT] secret get by system:serviceaccount:default:default | pod=attacker
+[DEQUEUE-B] k8s_secret_access  pod=attacker
+2026-07-20 11:10:32,001 WARNING [HIGH] T1552: Secret access by default/attacker
+2026-07-20 11:10:32,008 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:32,008 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:35,505 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:35,506 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:10:54,036 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:10:54,037 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:11:12,540 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:11:12,541 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:11:31,270 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:11:31,270 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:11:49,743 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:11:49,743 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:12:08,468 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:12:08,468 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:12:26,931 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:12:26,932 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:12:45,618 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:12:45,618 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:13:04,314 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:13:04,315 WARNING [MEDIUM] T1021: Remote exec into default/attacker
+2026-07-20 11:13:22,882 INFO [AUDIT] pod/exec by kubernetes-admin -> default/attacker
+[DEQUEUE-B] pod_exec  pod=attacker
+2026-07-20 11:13:22,882 WARNING [MEDIUM] T1021: Remote exec into default/attacker

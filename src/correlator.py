@@ -31,6 +31,8 @@ class Correlator:
         while True:
             try:
                 ev = self.event_queue.get(timeout=1)
+                import time as time
+                log.info(f"[DEQUEUE] {ev.get('event_type')} {ev.get('binary','')} pod={ev.get('pod_name')} qsize_after={self.event_queue.qsize()}")
                 alerts = self.graph.add_event(ev)
                 self.alert_list.extend(alerts)
             except queue.Empty:

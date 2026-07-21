@@ -2,6 +2,7 @@ import subprocess
 import json
 import threading
 import queue
+import time
 import logging
 from datetime import datetime
 from src.uid_resolver import PodUIDCache, build_docker_id_map
@@ -15,8 +16,10 @@ class TetragonConsumer:
         self.out_queue = out_queue
         self.event_count = 0
         self._docker_map = {}
-        self._exec_container_map = {}  # exec-spawned container ID -> pod UID
+        self._exec_container_map = {}
         self._lock = threading.Lock()
+        self._retry_buffer = []
+        self._retry_lock = threading.Lock()
         self._refresh_docker_map()
 
     def _refresh_docker_map(self):
@@ -31,17 +34,14 @@ class TetragonConsumer:
     def start(self):
         threading.Thread(target=self._refresh_loop, daemon=True).start()
         threading.Thread(target=self._consume_loop, daemon=True).start()
+        threading.Thread(target=self._retry_loop, daemon=True).start()
 
     def _refresh_loop(self):
-        import time
         while True:
-            time.sleep(30)
+            time.sleep(3)
             self._refresh_docker_map()
 
     def _resolve_uid(self, proc: dict):
-        """Returns (pod_uid, pod_name, namespace) or (None, None, None)"""
-        
-        # Strategy 1: Tetragon native pod field
         if "pod" in proc:
             pod = proc["pod"]
             uid = pod.get("uid")
@@ -55,14 +55,12 @@ class TetragonConsumer:
             return None, None, None
 
         with self._lock:
-            # Strategy 2: known exec container map (built from runc args)
             uid = self._exec_container_map.get(docker[:32])
             if uid:
                 meta = self.cache.get_meta(uid)
                 if meta:
                     return uid, meta["name"], meta["ns"]
 
-            # Strategy 3: docker map (known container IDs from K8s API)
             for prefix_len in [15, 12, 8]:
                 uid = self._docker_map.get(docker[:prefix_len])
                 if uid:
@@ -73,17 +71,11 @@ class TetragonConsumer:
         return None, None, None
 
     def _learn_exec_container(self, proc: dict):
-        """
-        When runc exec runs, its arguments contain the full container ID.
-        Map that ID back to the pod UID using known docker map entries.
-        e.g. runc ... exec ... 4bd905b42b92a8d3d57b23f7faf8713c86314b63e44a1db969402403814333e3
-        """
         binary = proc.get("binary", "")
         if "runc" not in binary:
             return
 
         args = proc.get("arguments", "")
-        # The last token in runc exec args is the full container ID
         tokens = args.split()
         if not tokens:
             return
@@ -92,12 +84,10 @@ class TetragonConsumer:
         if len(full_container_id) < 32:
             return
 
-        # Try to find which pod owns this container ID by prefix matching
         with self._lock:
             for prefix_len in [15, 12, 8]:
                 uid = self._docker_map.get(full_container_id[:prefix_len])
                 if uid:
-                    # Map the full exec container ID to this pod UID
                     self._exec_container_map[full_container_id[:32]] = uid
                     meta = self.cache.get_meta(uid)
                     pod_name = meta["name"] if meta else "unknown"
@@ -124,7 +114,6 @@ class TetragonConsumer:
 
                     if "process_exec" in raw:
                         inner_proc = raw["process_exec"]["process"]
-                        # Learn exec containers from runc events
                         self._learn_exec_container(inner_proc)
 
                         tagged = self._tag_event(raw)
@@ -157,12 +146,10 @@ class TetragonConsumer:
             log.error(f"Stream error: {e}")
 
     def _tag_network_event(self, raw: dict):
-        """Parse tcp_connect kprobe events into network_connect telemetry."""
         pk = raw.get("process_kprobe", {})
         if pk.get("function_name") != "tcp_connect":
             return None
 
-        # Extract sock_arg
         sock = None
         for a in pk.get("args", []):
             if "sock_arg" in a:
@@ -176,29 +163,23 @@ class TetragonConsumer:
         dport = sock.get("dport", 0)
         sport = sock.get("sport", 0)
 
-        # Filter: only pod-network source IPs (10.244.x.x)
         if not saddr.startswith("10.244."):
             return None
 
-        # Filter out loopback and control-plane noise
         if daddr.startswith("127.") or daddr.startswith("172.18.") or daddr.startswith("::"):
             return None
 
-        # Resolve src IP -> pod UID using IP index
         src_meta = self.cache.get_meta_by_ip(saddr)
         if not src_meta:
             return None
 
-        # get_meta_by_ip returns {name, ns, ip, sa, node} — get uid via IP lookup
         src_uid = self.cache.resolve_by_ip(saddr)
         if not src_uid:
             return None
 
-        # Skip if source is a system namespace pod
         if src_meta.get("ns") in ("kube-system", "local-path-storage"):
             return None
 
-        # Resolve dst IP -> pod name if it's a known pod
         dst_uid = self.cache.resolve_by_ip(daddr)
         dst_meta = self.cache.get_meta(dst_uid) if dst_uid else None
         dst_pod_name = dst_meta["name"] if dst_meta else daddr
@@ -227,9 +208,6 @@ class TetragonConsumer:
     }
 
     def _tag_capability_event(self, raw: dict):
-        """Parse cap_capable kprobe events (dangerous capability checks) into
-        capability_check telemetry — a kernel-level container-escape signal
-        that doesn't depend on recognizing a specific binary name."""
         pk = raw.get("process_kprobe", {})
         proc = pk.get("process", {})
         if not proc:
@@ -271,11 +249,24 @@ class TetragonConsumer:
         proc = raw["process_exec"]["process"]
         binary = proc.get("binary", "")
 
-        # Skip runc/kernel internals
         if binary in ("/usr/bin/runc", "/proc/self/fd/6", "<kernel>"):
             return None
 
         pod_uid, pod_name, namespace = self._resolve_uid(proc)
+
+        if not pod_uid:
+            has_container_ref = bool(proc.get("docker")) or "pod" in proc
+            if has_container_ref:
+                with self._retry_lock:
+                    self._retry_buffer.append({
+                        "proc": proc,
+                        "raw_time": raw.get("time", datetime.now().isoformat()),
+                        "binary": binary,
+                        "exec_id": proc.get("exec_id", ""),
+                        "parent_exec_id": proc.get("parent_exec_id", ""),
+                        "first_seen": time.time(),
+                    })
+            return None
 
         return {
             "timestamp": raw.get("time", datetime.now().isoformat()),
@@ -288,3 +279,35 @@ class TetragonConsumer:
             "exec_id": proc.get("exec_id", ""),
             "parent_exec_id": proc.get("parent_exec_id", ""),
         }
+
+    def _retry_loop(self):
+        while True:
+            time.sleep(0.3)
+            with self._retry_lock:
+                pending = self._retry_buffer
+                self._retry_buffer = []
+
+            still_pending = []
+            for entry in pending:
+                pod_uid, pod_name, namespace = self._resolve_uid(entry["proc"])
+                if pod_uid:
+                    tagged = {
+                        "timestamp": entry["raw_time"],
+                        "event_type": "process_exec",
+                        "node": "",
+                        "pod_uid": pod_uid,
+                        "pod_name": pod_name,
+                        "namespace": namespace,
+                        "binary": entry["binary"],
+                        "exec_id": entry["exec_id"],
+                        "parent_exec_id": entry["parent_exec_id"],
+                    }
+                    self.out_queue.put(tagged)
+                    log.info(f"[RETRY-RESOLVED] {namespace}/{pod_name} | {entry['binary']}")
+                elif time.time() - entry["first_seen"] < 2.0:
+                    still_pending.append(entry)
+                else:
+                    log.warning(f"[DROPPED] Could not resolve pod_uid for {entry['binary']} after 2s retry window")
+
+            with self._retry_lock:
+                self._retry_buffer.extend(still_pending)

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t1548-privesc-test
+  namespace: default
+spec:
+  containers:
+  - name: privesc
+    image: ubuntu:latest
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true

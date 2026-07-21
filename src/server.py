@@ -49,6 +49,7 @@ def correlator_loop():
     while True:
         try:
             ev = correlator.event_queue.get(timeout=0.5)
+            print(f"[DEQUEUE-B] {ev.get('event_type')} {ev.get('binary','')} pod={ev.get('pod_name')}", flush=True)
             # Add to graph
             alerts = correlator.graph.add_event(ev)
             correlator.alert_list.extend(alerts)
@@ -321,14 +322,33 @@ def index():
     return send_from_directory('../dashboard', 'index.html')
 
 if __name__ == '__main__':
-    print("Starting CAGE correlator...")
+    import os
+    ABLATION_MODE = os.environ.get("ABLATION_MODE", "fused")  # tetragon_only | audit_only | fused
+    print(f"Starting CAGE correlator... [ABLATION_MODE={ABLATION_MODE}]")
     correlator.cache.start_watch()
     time.sleep(2)
 
     from src.tetragon_consumer import TetragonConsumer
     from src.audit_log_consumer import AuditLogConsumer
-    TetragonConsumer(correlator.cache, correlator.event_queue).start()
-    AuditLogConsumer(correlator.cache, correlator.event_queue).start()
+    from src.network_monitor import NetworkMonitor
+
+    if ABLATION_MODE in ("tetragon_only", "fused"):
+        TetragonConsumer(correlator.cache, correlator.event_queue).start()
+        print("  [ON]  TetragonConsumer")
+    else:
+        print("  [OFF] TetragonConsumer")
+
+    if ABLATION_MODE in ("audit_only", "fused"):
+        AuditLogConsumer(correlator.cache, correlator.event_queue).start()
+        print("  [ON]  AuditLogConsumer")
+    else:
+        print("  [OFF] AuditLogConsumer")
+
+    if ABLATION_MODE == "fused":
+        NetworkMonitor(correlator.cache, correlator.event_queue).start()
+        print("  [ON]  NetworkMonitor")
+    else:
+        print("  [OFF] NetworkMonitor")
 
     # Start correlator loop in background
     threading.Thread(target=correlator_loop, daemon=True).start()

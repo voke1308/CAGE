@@ -120,20 +120,26 @@ class AuditLogConsumer:
                 events.append(discovery_event)
 
         if resource == "pods" and subresource == "exec" and verb == "get":
-            target_pod = obj.get("name", "")
-            namespace = obj.get("namespace", "default")
-            target_uid = self.cache.resolve_by_name(namespace, target_pod)
-            log.info(f"[AUDIT] pod/exec by {username} -> {namespace}/{target_pod}")
-            events.append({
-                "timestamp": raw.get("requestReceivedTimestamp", datetime.now().isoformat()),
-                "event_type": "pod_exec",
-                "target_pod": target_pod,
-                "target_uid": target_uid,
-                "namespace": namespace,
-                "user": username,
-                "pod_uid": target_uid,
-                "pod_name": target_pod,
-            })
+            request_uri = raw.get("requestURI", "")
+            # CAGE's own NetworkMonitor polls "kubectl exec <pod> -- cat /proc/net/tcp"
+            # every few seconds to watch for lateral connections. That poll is itself
+            # a pods/exec call and must not be mistaken for a real remote-exec (T1021).
+            is_self_monitor_poll = "command=cat" in request_uri and "%2Fproc%2Fnet%2Ftcp" in request_uri
+            if not is_self_monitor_poll:
+                target_pod = obj.get("name", "")
+                namespace = obj.get("namespace", "default")
+                target_uid = self.cache.resolve_by_name(namespace, target_pod)
+                log.info(f"[AUDIT] pod/exec by {username} -> {namespace}/{target_pod}")
+                events.append({
+                    "timestamp": raw.get("requestReceivedTimestamp", datetime.now().isoformat()),
+                    "event_type": "pod_exec",
+                    "target_pod": target_pod,
+                    "target_uid": target_uid,
+                    "namespace": namespace,
+                    "user": username,
+                    "pod_uid": target_uid,
+                    "pod_name": target_pod,
+                })
 
         return events
 

@@ -40,6 +40,13 @@ CRYPTOMINING_INDICATORS = (
 FORK_BOMB_EXEC_THRESHOLD = 25      # execs from the same pod...
 FORK_BOMB_WINDOW_SECONDS = 10      # ...within this many seconds
 
+# --- Network scan/lateral-movement burst detection (T1610) ---
+CONNECTION_BURST_THRESHOLD = 5        # distinct destination pods...
+CONNECTION_BURST_WINDOW_SECONDS = 10  # ...within this many seconds
+
+# --- Shell / remote-exec correlation (T1059) ---
+REMOTE_EXEC_CORRELATION_SECONDS = 10  # T1059 within this long after a T1021 is more suspicious
+
 class CausalGraph:
     def __init__(self):
         self._lock = threading.RLock()
@@ -48,6 +55,7 @@ class CausalGraph:
         self._event_window = {}
         self._fired_chains = set()
         self._exec_burst = {}       # pod_uid -> [timestamps] for fork-bomb detection
+        self._conn_burst = {}       # pod_uid -> [(timestamp, dst_pod_name)] for T1610 scan detection
 
     def add_event(self, event: dict) -> list:
         with self._lock:
@@ -95,23 +103,46 @@ class CausalGraph:
         return ns in SHELL_WHITELIST_NAMESPACES or \
                any(pod.startswith(p) for p in SHELL_WHITELIST_POD_PREFIXES)
 
+    def _recent_remote_exec(self, pod_uid, current_ts):
+        """True if a T1021 (kubectl exec) event for this pod landed within the
+        correlation window just before current_ts."""
+        for t, e in self._event_window.get(pod_uid, []):
+            if e.get("event_type") == "pod_exec" and \
+               (current_ts - t) < timedelta(seconds=REMOTE_EXEC_CORRELATION_SECONDS):
+                return True
+        return False
+
     def _check_t1059(self, event):
         if event.get("event_type") != "process_exec":
             return None
         if not event.get("pod_uid") or self._is_whitelisted(event):
             return None
         binary = event.get("binary", "")
-        if binary in ("/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/sh"):
-            log.warning(f"[MEDIUM] T1059: Shell in {event.get('namespace')}/{event.get('pod_name')}")
-            return {
-                "severity": "MEDIUM", "rule": "T1059",
-                "description": "Shell execution inside pod",
-                "pod_uid": event["pod_uid"],
-                "pod_name": event.get("pod_name"),
-                "namespace": event.get("namespace"),
-                "binary": binary,
-                "timestamp": event.get("timestamp"),
-            }
+        if binary not in ("/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/sh"):
+            return None
+
+        pod_uid = event["pod_uid"]
+        try:
+            ts = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
+        except Exception:
+            ts = None
+
+        correlated = bool(ts) and self._recent_remote_exec(pod_uid, ts)
+        severity = "MEDIUM" if correlated else "LOW"
+
+        log.warning(f"[{severity}] T1059: Shell in {event.get('namespace')}/{event.get('pod_name')}"
+                    + (" (preceded by kubectl exec)" if correlated else " (no remote-exec correlation)"))
+        return {
+            "severity": severity, "rule": "T1059",
+            "description": "Shell execution inside pod"
+                            + (" following remote exec session" if correlated else ""),
+            "pod_uid": pod_uid,
+            "pod_name": event.get("pod_name"),
+            "namespace": event.get("namespace"),
+            "binary": binary,
+            "correlated_with_t1021": correlated,
+            "timestamp": event.get("timestamp"),
+        }
 
     def _check_t1021(self, event):
         if event.get("event_type") != "pod_exec":
@@ -142,6 +173,8 @@ class CausalGraph:
         }
 
     def _check_t1610(self, event):
+        """Network lateral movement: flag scan-like bursts (connections to several
+        distinct pods in a short window), not a single ordinary pod-to-pod call."""
         if event.get("event_type") != "network_connect":
             return None
         if self._is_whitelisted(event):
@@ -151,11 +184,29 @@ class CausalGraph:
         # Only flag cross-pod connections (not external IPs)
         if not dst or dst == src or not event.get("dst_pod_uid"):
             return None
-        log.warning(f"[MEDIUM] T1610: Network lateral move {src} -> {dst}:{event.get('dst_port')}")
+
+        pod_uid = event.get("pod_uid")
+        try:
+            now = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+        self._conn_burst.setdefault(pod_uid, []).append((now, dst))
+        self._conn_burst[pod_uid] = [
+            (t, d) for t, d in self._conn_burst[pod_uid]
+            if (now - t) < timedelta(seconds=CONNECTION_BURST_WINDOW_SECONDS)
+        ]
+        distinct_dsts = {d for _, d in self._conn_burst[pod_uid]}
+        if len(distinct_dsts) < CONNECTION_BURST_THRESHOLD:
+            return None
+
+        log.warning(f"[MEDIUM] T1610: Network scan-like burst from {src}: "
+                    f"{len(distinct_dsts)} distinct pods in {CONNECTION_BURST_WINDOW_SECONDS}s")
         return {
             "severity": "MEDIUM", "rule": "T1610",
-            "description": f"Lateral network connection to pod {dst} port {event.get('dst_port')}",
-            "pod_uid": event.get("pod_uid"),
+            "description": f"Lateral movement scan: {len(distinct_dsts)} pods contacted "
+                            f"in {CONNECTION_BURST_WINDOW_SECONDS}s",
+            "pod_uid": pod_uid,
             "pod_name": src,
             "namespace": event.get("namespace"),
             "dst_pod_name": dst,
@@ -327,7 +378,9 @@ class CausalGraph:
         has_t1059 = bool(binaries & {"/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/sh"})
         has_t1021 = "pod_exec" in event_types
         has_t1552 = "k8s_secret_access" in event_types
-        has_t1610 = "network_connect" in event_types
+        # Same burst threshold as _check_t1610 — a single ordinary connection
+        # must not be enough to satisfy this leg of the chain either.
+        has_t1610 = len({d for _, d in self._conn_burst.get(pod_uid, [])}) >= CONNECTION_BURST_THRESHOLD
 
         alerts = []
 
